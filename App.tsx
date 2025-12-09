@@ -136,7 +136,22 @@ function App() {
   useEffect(() => {
       if (!user) return;
 
+      console.log('🔥 Subscribing to Firebase agent updates...');
+      
       const unsubscribe = subscribeToAgentUpdates((data) => {
+          console.log('📡 Received agent update from Firebase:', {
+              updatedBy: data.updatedBy,
+              count: data.count,
+              timestamp: data.timestamp,
+              isMyUpdate: data.updatedBy === user.email
+          });
+          
+          // Update local agents state for everyone (including the person who updated)
+          setAgents(data.agents);
+          const currentInterval = getCurrentInterval();
+          const staffing = getIntervalStaffing(staffingRequirements, staffingCommitments, currentInterval);
+          setIntervalData(calculateIntervalStats(data.agents, staffing.required, staffing.committed));
+          
           // Only show notification if update is from someone else
           if (data.updatedBy !== user.email) {
               if ('Notification' in window && Notification.permission === 'granted') {
@@ -148,16 +163,11 @@ function App() {
                       requireInteraction: false
                   });
               }
-              
-              // Update local agents state
-              setAgents(data.agents);
-              const currentInterval = getCurrentInterval();
-              const staffing = getIntervalStaffing(staffingRequirements, staffingCommitments, currentInterval);
-              setIntervalData(calculateIntervalStats(data.agents, staffing.required, staffing.committed));
           }
       });
 
       return () => {
+          console.log('🔥 Unsubscribing from Firebase agent updates...');
           unsubscribe();
       };
   }, [user, staffingRequirements, staffingCommitments]);

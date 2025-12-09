@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
+import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase } from '../services/firebaseService';
 
 interface Props {
     onDataUpdate: (agents: Agent[]) => void;
@@ -20,7 +21,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
     const [isEditingStaffing, setIsEditingStaffing] = useState(false);
 
     // Save the Roster Mapping
-    const handleRosterProcess = () => {
+    const handleRosterProcess = async () => {
         try {
             if (!rosterText.trim()) {
                 alert('⚠️ Please paste roster data before processing.');
@@ -35,6 +36,20 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 return;
             }
 
+            // Save to Firebase
+            const rosterArray: Agent[] = Object.entries(rosterMap).map(([name, role]) => ({
+                id: name,
+                name: name,
+                state: '',
+                duration: '',
+                station: '',
+                team: '',
+                skill: '',
+                role: role
+            }));
+            
+            await saveRosterToFirebase(rosterArray);
+
             onRosterUpdate(rosterMap);
             setIsEditingRoster(false);
             setRosterText(''); // Clear text to keep it clean
@@ -45,7 +60,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
         }
     };
 
-    const handleReportProcess = () => {
+    const handleReportProcess = async () => {
         try {
             if (!reportText.trim()) {
                 alert('⚠️ Please paste agent report data before processing.');
@@ -83,7 +98,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
         }
     };
 
-    const handleStaffingProcess = () => {
+    const handleStaffingProcess = async () => {
         try {
             if (!staffingText.trim()) {
                 alert('⚠️ Please paste staffing requirements and commitments data before processing.');
@@ -102,6 +117,10 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 alert('❌ Could not find any valid staffing data.\\n\\nPlease ensure you are pasting the correct format with:\\n- "HN CS Requirement" / "HN CS Commitment"\\n- "PH CS Requirement" / "PH CS Commitment"\\n- "Retention Requirement" / "Retention Commitment"\\n- "Key Client Support Requirement" / "Key Client Support Commitment"');
                 return;
             }
+
+            // Save to Firebase
+            await saveStaffingRequirementsToFirebase(requirements);
+            await saveStaffingCommitmentsToFirebase(commitments);
 
             onStaffingUpdate(requirements, commitments);
             setIsEditingStaffing(false);

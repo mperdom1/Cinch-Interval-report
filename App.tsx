@@ -214,6 +214,56 @@ function App() {
       }
   }, []);
 
+  const copyAttainmentForTeams = useCallback(() => {
+      try {
+          // Get current interval stats
+          const hnRow = intervalData.find(row => row.label === 'HN');
+          const phRow = intervalData.find(row => row.label === 'PH');
+          const retRow = intervalData.find(row => row.label === 'Ret');
+          const keyRow = intervalData.find(row => row.label === 'Key');
+
+          if (!hnRow || !phRow || !retRow || !keyRow) {
+              alert('⚠️ No data available to copy');
+              return;
+          }
+
+          // Calculate attainment percentages
+          const calculateAttainment = (actual: number | string, target: number | string, type: 'required' | 'committed') => {
+              const act = typeof actual === 'string' ? parseFloat(actual) : actual;
+              const tgt = typeof target === 'string' ? parseFloat(target) : target;
+              if (tgt === 0) return '0%';
+              return Math.round((act / tgt) * 100) + '%';
+          };
+
+          // Get HC Required and HC Committed from interval data
+          const reqRow = intervalData.find(row => row.label === 'HC Required');
+          const comRow = intervalData.find(row => row.label === 'HC Committed');
+
+          const text = `Key Client Support - Actual vs Required Attainment :${calculateAttainment(keyRow.key, reqRow?.key || 0, 'required')}
+Key Client Support - Actual vs Committed Attainment :${calculateAttainment(keyRow.key, comRow?.key || 0, 'committed')}
+
+CSR HN - Actual vs Committed Attainment :${calculateAttainment(hnRow.hn, comRow?.hn || 0, 'committed')}
+CSR HN - Actual vs Committed Attainment :${calculateAttainment(hnRow.hn, comRow?.hn || 0, 'committed')}
+
+CSR PH - Actual vs Required Attainment :${calculateAttainment(phRow.ph, reqRow?.ph || 0, 'required')}
+CSR PH - Actual vs Committed Attainment :${calculateAttainment(phRow.ph, comRow?.ph || 0, 'committed')}
+
+Retention - Actual vs Required Attainment :${calculateAttainment(retRow.ret, reqRow?.ret || 0, 'required')}
+Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comRow?.ret || 0, 'committed')}`;
+
+          // Copy to clipboard
+          navigator.clipboard.writeText(text).then(() => {
+              alert('✅ Attainment report copied to clipboard!\n\nYou can now paste it in Teams.');
+          }).catch(err => {
+              console.error('Failed to copy:', err);
+              alert('❌ Failed to copy to clipboard. Please try again.');
+          });
+      } catch (error) {
+          console.error('Error generating Teams report:', error);
+          alert('❌ Error generating report. Please try again.');
+      }
+  }, [intervalData]);
+
   if (!user) {
       return <LoginScreen onLogin={handleLogin} />;
   }
@@ -268,6 +318,14 @@ function App() {
             </div>
 
             <div className="flex items-center gap-3">
+               <button 
+                  onClick={copyAttainmentForTeams}
+                  className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm"
+                  aria-label="Copy attainment report for Teams"
+               >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  Copy for Teams
+               </button>
                <button 
                   onClick={() => setShowHelper(true)}
                   className="flex items-center gap-1 bg-[#5CCC69] hover:bg-[#4abb57] text-[#004d13] px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm"

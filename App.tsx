@@ -117,6 +117,26 @@ function App() {
       setIntervalData(calculateIntervalStats(agents, staffing.required, staffing.committed));
   }, [agents, staffingRequirements, staffingCommitments]);
 
+  // Request notification permission on mount
+  useEffect(() => {
+      if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+      }
+  }, []);
+
+  const sendNotification = useCallback((agentCount: number) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+          const currentInterval = getCurrentInterval();
+          new Notification('CINCH Interval Staffing Updated', {
+              body: `Agent report updated for ${currentInterval}\n${agentCount} active agents`,
+              icon: '/favicon.ico',
+              badge: '/favicon.ico',
+              tag: 'agent-update',
+              requireInteraction: false
+          });
+      }
+  }, []);
+
   const handleDataUpdate = useCallback((newAgents: Agent[]) => {
       setAgents(newAgents);
       const currentInterval = getCurrentInterval();
@@ -131,7 +151,10 @@ function App() {
       } catch (error) {
         console.error('Failed to save agents to localStorage:', error);
       }
-  }, [staffingRequirements, staffingCommitments]);
+
+      // Send notification
+      sendNotification(newAgents.length);
+  }, [staffingRequirements, staffingCommitments, sendNotification]);
 
   const handleRosterUpdate = useCallback((newRoster: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'>) => {
       setRoster(newRoster);

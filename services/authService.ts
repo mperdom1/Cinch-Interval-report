@@ -3,6 +3,9 @@ import { User, UserRole } from '../types';
 
 const USERS_DB_KEY = 'cinch_users_db';
 
+// Admin emails that can always change roles
+const ADMIN_EMAILS = ['stgonzales@cinchhs.com', 'mperdomo@cinchhs.com'];
+
 interface AuthResponse {
     success: boolean;
     user?: User;
@@ -23,29 +26,38 @@ export const login = (email: string, passwordRole: string): AuthResponse => {
         return { success: false, error: 'Invalid password. Password must be your role (wfm, supervisor, or om).' };
     }
 
+    const emailLower = email.toLowerCase();
+    const isAdmin = ADMIN_EMAILS.includes(emailLower);
+
     // 3. Backend Logic (Simulated with LocalStorage)
     const db = JSON.parse(localStorage.getItem(USERS_DB_KEY) || '{}');
-    const existingRole = db[email.toLowerCase()];
+    const existingRole = db[emailLower];
 
     if (existingRole) {
-        // Logic: If user exists, they must match the stored role.
-        // Exception: WFM users can sign in as other roles (or if the stored role is WFM).
-        if (existingRole !== 'wfm' && existingRole !== inputRole) {
-             return { 
-                 success: false, 
-                 error: `Security Alert: This email is registered as '${existingRole.toUpperCase()}'. You cannot sign in as '${inputRole.toUpperCase()}'.` 
-             };
+        // Admins can always change roles
+        if (isAdmin) {
+            // Update role in database for admin
+            db[emailLower] = inputRole;
+            localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
+        } else {
+            // Regular users: role is locked forever
+            if (existingRole !== inputRole) {
+                return { 
+                    success: false, 
+                    error: `Your account is registered as '${existingRole.toUpperCase()}'. This role cannot be changed. Please sign in with role: ${existingRole}` 
+                };
+            }
         }
     } else {
-        // Register new user
-        db[email.toLowerCase()] = inputRole;
+        // Register new user with their chosen role (locked forever unless admin)
+        db[emailLower] = inputRole;
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
     }
 
     return {
         success: true,
         user: {
-            email: email.toLowerCase(),
+            email: emailLower,
             role: inputRole as UserRole
         }
     };

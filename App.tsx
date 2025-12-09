@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import IntervalTable from './components/IntervalTable';
 import AgentAlerts from './components/AgentAlerts';
@@ -12,6 +11,7 @@ import { MOCK_INTERVAL_DATA } from './constants';
 import { calculateIntervalStats } from './utils/wfmHelpers';
 import { Agent, IntervalRow, User, StaffingRequirements, StaffingCommitments } from './types';
 import { getCurrentInterval, getIntervalStaffing } from './utils/staffingHelpers';
+import { subscribeToAgentUpdates } from './services/firebaseService';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -120,9 +120,47 @@ function App() {
   // Request notification permission on mount
   useEffect(() => {
       if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
+          Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                  console.log('✅ Notification permission granted.');
+              } else if (permission === 'denied') {
+                  console.log('❌ Notification permission denied.');
+              } else {
+                  console.log('⚠️ Notification permission status is default.');
+              }
+          });
       }
   }, []);
+
+  // Subscribe to agent updates from Firebase
+  useEffect(() => {
+      if (!user) return;
+
+      const unsubscribe = subscribeToAgentUpdates((data) => {
+          // Only show notification if update is from someone else
+          if (data.updatedBy !== user.email) {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('🔔 CINCH Interval Staffing Updated', {
+                      body: `Agent report updated by ${data.updatedBy}\n${data.count} active agents`,
+                      icon: '/favicon.ico',
+                      badge: '/favicon.ico',
+                      tag: 'agent-update-realtime',
+                      requireInteraction: false
+                  });
+              }
+              
+              // Update local agents state
+              setAgents(data.agents);
+              const currentInterval = getCurrentInterval();
+              const staffing = getIntervalStaffing(staffingRequirements, staffingCommitments, currentInterval);
+              setIntervalData(calculateIntervalStats(data.agents, staffing.required, staffing.committed));
+          }
+      });
+
+      return () => {
+          unsubscribe();
+      };
+  }, [user, staffingRequirements, staffingCommitments]);
 
   const sendNotification = useCallback((agentCount: number) => {
       if ('Notification' in window && Notification.permission === 'granted') {
@@ -417,6 +455,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
                   onStaffingUpdate={handleStaffingUpdate}
                   currentRoster={roster}
                   lastUpdated={rosterDate}
+                  userEmail={user.email}
               />
            </div>
         )}

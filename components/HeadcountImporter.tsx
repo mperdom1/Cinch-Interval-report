@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
-import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase } from '../services/firebaseService';
+import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, triggerAgentUpdateNotification } from '../services/firebaseService';
 
 interface Props {
     onDataUpdate: (agents: Agent[]) => void;
@@ -10,9 +10,10 @@ interface Props {
     onStaffingUpdate: (requirements: StaffingRequirements, commitments: StaffingCommitments) => void;
     currentRoster: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'>;
     lastUpdated: string | null;
+    userEmail: string;
 }
 
-const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onStaffingUpdate, currentRoster, lastUpdated }) => {
+const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onStaffingUpdate, currentRoster, lastUpdated, userEmail }) => {
     const [reportText, setReportText] = useState('');
     const [rosterText, setRosterText] = useState('');
     const [staffingText, setStaffingText] = useState('');
@@ -89,6 +90,9 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 alert('⚠️ No valid agents found in the report.\n\nPlease check your data format.');
                 return;
             }
+
+            // Trigger notification for all users
+            await triggerAgentUpdateNotification(agents, userEmail);
 
             setProcessedCount(agents.length);
             onDataUpdate(agents);

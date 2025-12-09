@@ -1,5 +1,5 @@
 import { realtimeDb } from '../firebase';
-import { ref, set, get, update } from 'firebase/database';
+import { ref, set, get, update, onValue, off } from 'firebase/database';
 import type { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 
 // Save roster data to Firebase
@@ -119,5 +119,37 @@ export const getAgentsFromFirebase = async (): Promise<Agent[] | null> => {
   } catch (error) {
     console.error('Error getting agents from Firebase:', error);
     return null;
+  }
+};
+
+// Listen to agent report updates in real-time
+export const subscribeToAgentUpdates = (callback: (data: { agents: Agent[], timestamp: string, updatedBy: string }) => void) => {
+  const agentUpdateRef = ref(realtimeDb, 'agentUpdates/latest');
+  
+  const unsubscribe = onValue(agentUpdateRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      callback(data);
+    }
+  });
+
+  // Return unsubscribe function
+  return () => off(agentUpdateRef);
+};
+
+// Trigger agent update notification for all users
+export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy: string): Promise<void> => {
+  try {
+    const updateRef = ref(realtimeDb, 'agentUpdates/latest');
+    await set(updateRef, {
+      agents: agents,
+      timestamp: new Date().toISOString(),
+      updatedBy: updatedBy,
+      count: agents.length
+    });
+    console.log('Agent update notification triggered');
+  } catch (error) {
+    console.error('Error triggering agent update notification:', error);
+    throw error;
   }
 };

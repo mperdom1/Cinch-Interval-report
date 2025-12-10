@@ -23,6 +23,7 @@ import {
 import { ActiveAgentTable } from './components/ActiveAgentTable';
 import { messaging } from './firebase';
 import { getToken, onMessage } from 'firebase/messaging';
+import { getDatabase, ref, set } from 'firebase/database';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -461,26 +462,38 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
 
   // Initialize Firebase Messaging and request FCM token
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          getToken(messaging, { vapidKey: 'BC3Bh8fU10ebiJxl5de3fk-uzIQaxbzvdCg_4T9tHOL_MXLZ5NQPYwCWAPzvL1l2b3zJLMAiycvELhqIB0MGuIU', serviceWorkerRegistration: registration })
-            .then((currentToken) => {
-              if (currentToken) {
-                console.log('FCM Token:', currentToken);
-              } else {
-                console.log('No registration token available. Request permission to generate one.');
-              }
+    // Solicita permiso de notificación
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        // Registra el service worker
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then((registration) => {
+            // Obtiene el token FCM
+            getToken(messaging, {
+              vapidKey: 'BC3Bh8fU10ebiJxl5de3fk-uzIQaxbzvdCg_4T9tHOL_MXLZ5NQPYwCWAPzvL1l2b3zJLMAiycvELhqIB0MGuIU',
+              serviceWorkerRegistration: registration
             })
-            .catch((err) => {
-              console.log('An error occurred while retrieving token. ', err);
-            });
-        });
-    }
-    // Escuchar mensajes en primer plano
+              .then((currentToken) => {
+                if (currentToken && user?.email) {
+                  console.log('FCM Token:', currentToken);
+                  // Guarda el token en la base de datos
+                  const db = getDatabase();
+                  set(ref(db, 'fcmTokens/' + user.email.replace(/[.@]/g, '_')), {
+                    token: currentToken,
+                    updatedAt: new Date().toISOString()
+                  });
+                }
+              })
+              .catch((err) => {
+                console.log('Error al obtener el token FCM:', err);
+              });
+          });
+      }
+    });
+
+    // Maneja mensajes en primer plano
     onMessage(messaging, (payload) => {
-      console.log('Message received. ', payload);
-      // Puedes mostrar una notificación personalizada aquí si quieres
+      console.log('Mensaje recibido:', payload);
       if (payload.notification) {
         new Notification(payload.notification.title, {
           body: payload.notification.body,
@@ -488,7 +501,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
         });
       }
     });
-  }, []);
+  }, [user]);
 
   if (!user) {
       return <LoginScreen onLogin={handleLogin} />;

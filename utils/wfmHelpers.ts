@@ -338,10 +338,22 @@ export const calculateIntervalStats = (
             const offlineStates = [
                 'ACW_Outbound', 'Training', 'Meeting', 'Coaching', 'Off Phone', 'Unscheduled break', 'System Issue', 'Mentoring'
             ];
-            row.hn = agents.filter(a => (a.role === 'HN' || (a.lob && a.lob.toLowerCase().includes('hn'))) && offlineStates.includes(a.state)).length;
-            row.ph = agents.filter(a => (a.role === 'PH' || (a.lob && a.lob.toLowerCase().includes('ph'))) && offlineStates.includes(a.state)).length;
-            row.ret = agents.filter(a => (a.role === 'Ret' || (a.lob && a.lob.toLowerCase().includes('ret'))) && offlineStates.includes(a.state)).length;
-            row.key = agents.filter(a => (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key'))) && offlineStates.includes(a.state)).length;
+            row.hn = agents.filter(a =>
+                offlineStates.includes(a.state) &&
+                (a.lob === 'CSR HN' || a.role === 'HN')
+            ).length;
+            row.ph = agents.filter(a =>
+                offlineStates.includes(a.state) &&
+                (a.lob === 'CSR PH' || a.role === 'PH')
+            ).length;
+            row.ret = agents.filter(a =>
+                offlineStates.includes(a.state) &&
+                (a.lob === 'Retention' || a.role === 'Ret')
+            ).length;
+            row.key = agents.filter(a =>
+                offlineStates.includes(a.state) &&
+                (a.lob === 'Key Client Support' || a.role === 'Key')
+            ).length;
         }
         if (cat === 'Avail Status') {
             // Contar solo agentes con estado 'Available' y LOB correspondiente

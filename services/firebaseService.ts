@@ -137,6 +137,34 @@ export const subscribeToAgentUpdates = (callback: (data: { agents: Agent[], time
   return () => off(agentUpdateRef);
 };
 
+// Subscribe to roster updates
+export const subscribeToRosterUpdates = (callback: (data: { roster: Agent[], timestamp: string, updatedBy: string }) => void) => {
+  const rosterUpdateRef = ref(realtimeDb, 'rosterUpdates/latest');
+  
+  const unsubscribe = onValue(rosterUpdateRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      callback(data);
+    }
+  });
+
+  return () => off(rosterUpdateRef);
+};
+
+// Subscribe to staffing updates
+export const subscribeToStaffingUpdates = (callback: (data: { requirements: StaffingRequirements, commitments: StaffingCommitments, timestamp: string, updatedBy: string }) => void) => {
+  const staffingUpdateRef = ref(realtimeDb, 'staffingUpdates/latest');
+  
+  const unsubscribe = onValue(staffingUpdateRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      callback(data);
+    }
+  });
+
+  return () => off(staffingUpdateRef);
+};
+
 // Trigger agent update notification for all users
 export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy: string): Promise<void> => {
   try {
@@ -150,6 +178,39 @@ export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy:
     console.log('Agent update notification triggered');
   } catch (error) {
     console.error('Error triggering agent update notification:', error);
+    throw error;
+  }
+};
+
+// Trigger roster update notification
+export const triggerRosterUpdateNotification = async (roster: Agent[], updatedBy: string): Promise<void> => {
+  try {
+    const updateRef = ref(realtimeDb, 'rosterUpdates/latest');
+    await set(updateRef, {
+      roster: roster,
+      timestamp: new Date().toISOString(),
+      updatedBy: updatedBy
+    });
+    console.log('Roster update notification triggered');
+  } catch (error) {
+    console.error('Error triggering roster update notification:', error);
+    throw error;
+  }
+};
+
+// Trigger staffing update notification
+export const triggerStaffingUpdateNotification = async (requirements: StaffingRequirements, commitments: StaffingCommitments, updatedBy: string): Promise<void> => {
+  try {
+    const updateRef = ref(realtimeDb, 'staffingUpdates/latest');
+    await set(updateRef, {
+      requirements: requirements,
+      commitments: commitments,
+      timestamp: new Date().toISOString(),
+      updatedBy: updatedBy
+    });
+    console.log('Staffing update notification triggered');
+  } catch (error) {
+    console.error('Error triggering staffing update notification:', error);
     throw error;
   }
 };

@@ -11,7 +11,7 @@ import { MOCK_INTERVAL_DATA } from './constants';
 import { calculateIntervalStats } from './utils/wfmHelpers';
 import { Agent, IntervalRow, User, StaffingRequirements, StaffingCommitments } from './types';
 import { getCurrentInterval, getIntervalStaffing } from './utils/staffingHelpers';
-import { subscribeToAgentUpdates } from './services/firebaseService';
+import { subscribeToAgentUpdates, subscribeToRosterUpdates, subscribeToStaffingUpdates } from './services/firebaseService';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -169,9 +169,9 @@ function App() {
   useEffect(() => {
       if (!user) return;
 
-      console.log('🔥 Subscribing to Firebase agent updates...');
+      console.log('🔥 Subscribing to Firebase updates...');
       
-      const unsubscribe = subscribeToAgentUpdates((data) => {
+      const unsubscribeAgents = subscribeToAgentUpdates((data) => {
           console.log('📡 Received agent update from Firebase:', {
               updatedBy: data.updatedBy,
               count: data.count,
@@ -188,8 +188,8 @@ function App() {
           // Only show notification if update is from someone else
           if (data.updatedBy !== user.email) {
               if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification('🔔 CINCH Interval Staffing Updated', {
-                      body: `Agent report updated by ${data.updatedBy}\n${data.count} active agents`,
+                  new Notification('🔔 Agent Report Updated', {
+                      body: `Updated by ${data.updatedBy}\n${data.count} active agents`,
                       icon: '/favicon.ico',
                       badge: '/favicon.ico',
                       tag: 'agent-update-realtime',
@@ -199,11 +199,95 @@ function App() {
           }
       });
 
+      const unsubscribeRoster = subscribeToRosterUpdates((data) => {
+          console.log('📡 Received roster update from Firebase:', {
+              updatedBy: data.updatedBy,
+              timestamp: data.timestamp,
+              isMyUpdate: data.updatedBy === user.email
+          });
+          
+          // Convert roster array back to map
+          const rosterMap: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'> = {};
+          data.roster.forEach(agent => {
+              rosterMap[agent.id] = agent.role;
+          });
+          
+          setRoster(rosterMap);
+          const now = new Date();
+          const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+          setRosterDate(dateStr);
+          
+          // Save to localStorage
+          try {
+              localStorage.setItem('wfm_roster_data', JSON.stringify(rosterMap));
+              localStorage.setItem('wfm_roster_date', dateStr);
+          } catch (error) {
+              console.error('Failed to save roster to localStorage:', error);
+          }
+          
+          // Only show notification if update is from someone else
+          if (data.updatedBy !== user.email) {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('📋 Roster Updated', {
+                      body: `Updated by ${data.updatedBy}`,
+                      icon: '/favicon.ico',
+                      badge: '/favicon.ico',
+                      tag: 'roster-update-realtime',
+                      requireInteraction: false
+                  });
+              }
+          }
+      });
+
+      const unsubscribeStaffing = subscribeToStaffingUpdates((data) => {
+          console.log('📡 Received staffing update from Firebase:', {
+              updatedBy: data.updatedBy,
+              timestamp: data.timestamp,
+              isMyUpdate: data.updatedBy === user.email
+          });
+          
+          setStaffingRequirements(data.requirements);
+          setStaffingCommitments(data.commitments);
+          
+          // Save to localStorage
+          try {
+              const now = new Date().toISOString();
+              localStorage.setItem('wfm_staffing_requirements', JSON.stringify(data.requirements));
+              localStorage.setItem('wfm_staffing_requirements_date', now);
+              localStorage.setItem('wfm_staffing_commitments', JSON.stringify(data.commitments));
+              localStorage.setItem('wfm_staffing_commitments_date', now);
+          } catch (error) {
+              console.error('Failed to save staffing to localStorage:', error);
+          }
+          
+          // Recalculate interval stats
+          if (agents.length > 0) {
+              const currentInterval = getCurrentInterval();
+              const staffing = getIntervalStaffing(data.requirements, data.commitments, currentInterval);
+              setIntervalData(calculateIntervalStats(agents, staffing.required, staffing.committed));
+          }
+          
+          // Only show notification if update is from someone else
+          if (data.updatedBy !== user.email) {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                  new Notification('📊 Staffing Data Updated', {
+                      body: `Updated by ${data.updatedBy}`,
+                      icon: '/favicon.ico',
+                      badge: '/favicon.ico',
+                      tag: 'staffing-update-realtime',
+                      requireInteraction: false
+                  });
+              }
+          }
+      });
+
       return () => {
-          console.log('🔥 Unsubscribing from Firebase agent updates...');
-          unsubscribe();
+          console.log('🔥 Unsubscribing from Firebase updates...');
+          unsubscribeAgents();
+          unsubscribeRoster();
+          unsubscribeStaffing();
       };
-  }, [user, staffingRequirements, staffingCommitments]);
+  }, [user, agents, staffingRequirements, staffingCommitments]);
 
   const sendNotification = useCallback((agentCount: number) => {
       if ('Notification' in window && Notification.permission === 'granted') {

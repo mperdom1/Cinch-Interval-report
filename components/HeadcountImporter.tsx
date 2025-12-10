@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
-import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, triggerAgentUpdateNotification } from '../services/firebaseService';
+import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, triggerAgentUpdateNotification, triggerRosterUpdateNotification, triggerStaffingUpdateNotification } from '../services/firebaseService';
 
 interface Props {
     onDataUpdate: (agents: Agent[]) => void;
@@ -50,6 +50,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
             }));
             
             await saveRosterToFirebase(rosterArray);
+            await triggerRosterUpdateNotification(rosterArray, userEmail);
 
             onRosterUpdate(rosterMap);
             setIsEditingRoster(false);
@@ -117,19 +118,43 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
             const comCount = Object.keys(commitments.hn).length + Object.keys(commitments.ph).length + 
                            Object.keys(commitments.ret).length + Object.keys(commitments.key).length;
             
+            // Show detailed breakdown
+            const summary = `
+Requirements Found:
+- HN: ${Object.keys(requirements.hn).length} intervals
+- PH: ${Object.keys(requirements.ph).length} intervals  
+- Retention: ${Object.keys(requirements.ret).length} intervals
+- Key: ${Object.keys(requirements.key).length} intervals
+
+Commitments Found:
+- HN: ${Object.keys(commitments.hn).length} intervals
+- PH: ${Object.keys(commitments.ph).length} intervals
+- Retention: ${Object.keys(commitments.ret).length} intervals  
+- Key: ${Object.keys(commitments.key).length} intervals
+
+Sample Requirements:
+- HN 8:00 AM: ${requirements.hn['8:00 AM'] || 'NOT FOUND'}
+- PH 8:00 AM: ${requirements.ph['8:00 AM'] || 'NOT FOUND'}
+- Retention 8:00 AM: ${requirements.ret['8:00 AM'] || 'NOT FOUND'}
+- Key 8:00 AM: ${requirements.key['8:00 AM'] || 'NOT FOUND'}
+            `.trim();
+            
+            console.log('📊 STAFFING DATA SUMMARY:\n' + summary);
+            
             if (reqCount === 0 && comCount === 0) {
-                alert('❌ Could not find any valid staffing data.\\n\\nPlease ensure you are pasting the correct format with:\\n- "HN CS Requirement" / "HN CS Commitment"\\n- "PH CS Requirement" / "PH CS Commitment"\\n- "Retention Requirement" / "Retention Commitment"\\n- "Key Client Support Requirement" / "Key Client Support Commitment"');
+                alert('❌ Could not find any valid staffing data.\\n\\nPlease ensure you are pasting the correct format with:\\n- "HN CS Requirement" / "HN CS Commitment"\\n- "PH CS Requirement" / "PH CS Commitment"\\n- "Retention Requirement" / "Retention Commitment"\\n- "Key Client Support Requirement" / "Key Client Support Commitment"\\n\\nCheck browser console (F12) for more details.');
                 return;
             }
 
             // Save to Firebase
             await saveStaffingRequirementsToFirebase(requirements);
             await saveStaffingCommitmentsToFirebase(commitments);
+            await triggerStaffingUpdateNotification(requirements, commitments, userEmail);
 
             onStaffingUpdate(requirements, commitments);
             setIsEditingStaffing(false);
             setStaffingText('');
-            alert(`✅ Staffing data updated successfully!\\n\\nRequirements: ${reqCount} intervals\\nCommitments: ${comCount} intervals\\n\\nData is saved and will be used for all interval calculations.`);
+            alert(`✅ Staffing data updated successfully!\\n\\n${summary}`);
         } catch (error) {
             console.error('Error processing staffing:', error);
             alert(`❌ Error processing staffing data:\\n\\n${error instanceof Error ? error.message : 'Unknown error occurred'}\\n\\nPlease check your data format and try again.`);

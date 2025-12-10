@@ -123,7 +123,7 @@ export const getAgentsFromFirebase = async (): Promise<Agent[] | null> => {
 };
 
 // Listen to agent report updates in real-time
-export const subscribeToAgentUpdates = (callback: (data: { agents: Agent[], timestamp: string, updatedBy: string }) => void) => {
+export const subscribeToAgentUpdates = (callback: (data: { agents: Agent[], timestamp: string, updatedBy: string, count: number }) => void) => {
   const agentUpdateRef = ref(realtimeDb, 'agentUpdates/latest');
   
   const unsubscribe = onValue(agentUpdateRef, (snapshot) => {

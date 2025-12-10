@@ -138,6 +138,26 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
 
     const rosterCount = Object.keys(currentRoster).length;
 
+    // Check if staffing data needs update (Monday check)
+    const needsStaffingUpdate = () => {
+        const savedDate = localStorage.getItem('wfm_staffing_requirements_date');
+        if (!savedDate) return true;
+        
+        const now = new Date();
+        const currentDay = now.getDay();
+        const savedTimestamp = new Date(savedDate);
+        const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // If it's Monday and data is older than 7 days
+        return currentDay === 1 && daysDiff >= 7;
+    };
+
+    const hasStaffingData = () => {
+        const savedReq = localStorage.getItem('wfm_staffing_requirements');
+        const savedCom = localStorage.getItem('wfm_staffing_commitments');
+        return savedReq && savedCom;
+    };
+
     return (
         <div className="space-y-6">
             
@@ -219,29 +239,63 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                             Staffing Requirements & Commitments (Weekly)
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                           Import staffing forecast data. Update weekly or when schedules change.
+                           Import staffing forecast data. Update <strong>weekly</strong> or when schedules change.
                         </p>
                     </div>
                 </div>
-                
-                {!isEditingStaffing ? (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-center justify-between">
+
+                {/* Monday Alert - Needs New Data */}
+                {needsStaffingUpdate() && (
+                    <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-3 animate-pulse">
                         <div className="flex items-start gap-3">
-                            <div className="bg-purple-100 text-purple-700 p-2 rounded-full">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                            <div className="bg-orange-200 text-orange-800 p-2 rounded-full">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                             </div>
                             <div>
-                                <h4 className="font-bold text-purple-900 text-sm">Staffing Data</h4>
-                                <p className="text-xs text-purple-700 mt-1">
-                                    Click to import or update requirements and commitments
+                                <h4 className="font-bold text-orange-900 text-sm">⚠️ New Week - Update Required</h4>
+                                <p className="text-xs text-orange-800 mt-1">
+                                    It's Monday! Please import new staffing data for this week.
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {!isEditingStaffing ? (
+                    <div className={`${needsStaffingUpdate() ? 'bg-orange-50 border-orange-300' : hasStaffingData() ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-4 flex items-center justify-between`}>
+                        <div className="flex items-start gap-3">
+                            <div className={`${needsStaffingUpdate() ? 'bg-orange-200 text-orange-700' : hasStaffingData() ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'} p-2 rounded-full`}>
+                                {hasStaffingData() && !needsStaffingUpdate() ? (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className={`font-bold text-sm ${needsStaffingUpdate() ? 'text-orange-900' : hasStaffingData() ? 'text-green-900' : 'text-purple-900'}`}>
+                                    {hasStaffingData() && !needsStaffingUpdate() ? 'Staffing Data Active' : 'Staffing Data'}
+                                </h4>
+                                <p className={`text-xs mt-1 ${needsStaffingUpdate() ? 'text-orange-700' : hasStaffingData() ? 'text-green-700' : 'text-purple-700'}`}>
+                                    {hasStaffingData() && !needsStaffingUpdate() 
+                                        ? 'Valid for this week' 
+                                        : 'Click to import or update requirements and commitments'}
+                                </p>
+                                {hasStaffingData() && !needsStaffingUpdate() && (
+                                    <p className="text-[10px] text-gray-500 mt-0.5">
+                                        Last Updated: {new Date(localStorage.getItem('wfm_staffing_requirements_date') || '').toLocaleString()}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <button 
                             onClick={() => setIsEditingStaffing(true)}
-                            className="bg-white border border-purple-200 text-purple-600 px-3 py-1.5 rounded text-xs font-bold hover:bg-purple-50 hover:text-purple-800 transition-colors shadow-sm"
+                            className={`bg-white border px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm ${
+                                needsStaffingUpdate() 
+                                    ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                                    : 'border-purple-200 text-purple-600 hover:bg-purple-50'
+                            }`}
                         >
-                            Import Staffing Data
+                            {needsStaffingUpdate() ? '⚠️ Update Now' : 'Import Staffing Data'}
                         </button>
                     </div>
                 ) : (

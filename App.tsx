@@ -78,7 +78,26 @@ function App() {
   const [staffingRequirements, setStaffingRequirements] = useState<StaffingRequirements>(() => {
     try {
       const saved = localStorage.getItem('wfm_staffing_requirements');
-      if (!saved) return { hn: {}, ph: {}, ret: {}, key: {} };
+      const savedDate = localStorage.getItem('wfm_staffing_requirements_date');
+      
+      if (!saved || !savedDate) return { hn: {}, ph: {}, ret: {}, key: {} };
+      
+      // Check if it's Monday and data is from last week
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const savedTimestamp = new Date(savedDate);
+      const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // If it's Monday (1) and data is older than 7 days, clear it
+      if (currentDay === 1 && daysDiff >= 7) {
+        console.log('🗓️ New week detected - clearing old staffing data');
+        localStorage.removeItem('wfm_staffing_requirements');
+        localStorage.removeItem('wfm_staffing_requirements_date');
+        localStorage.removeItem('wfm_staffing_commitments');
+        localStorage.removeItem('wfm_staffing_commitments_date');
+        return { hn: {}, ph: {}, ret: {}, key: {} };
+      }
+      
       const parsed = JSON.parse(saved);
       return typeof parsed === 'object' && parsed !== null ? parsed : { hn: {}, ph: {}, ret: {}, key: {} };
     } catch (error) {
@@ -90,7 +109,21 @@ function App() {
   const [staffingCommitments, setStaffingCommitments] = useState<StaffingCommitments>(() => {
     try {
       const saved = localStorage.getItem('wfm_staffing_commitments');
-      if (!saved) return { hn: {}, ph: {}, ret: {}, key: {} };
+      const savedDate = localStorage.getItem('wfm_staffing_commitments_date');
+      
+      if (!saved || !savedDate) return { hn: {}, ph: {}, ret: {}, key: {} };
+      
+      // Check if it's Monday and data is from last week
+      const now = new Date();
+      const currentDay = now.getDay();
+      const savedTimestamp = new Date(savedDate);
+      const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // If it's Monday (1) and data is older than 7 days, clear it
+      if (currentDay === 1 && daysDiff >= 7) {
+        return { hn: {}, ph: {}, ret: {}, key: {} };
+      }
+      
       const parsed = JSON.parse(saved);
       return typeof parsed === 'object' && parsed !== null ? parsed : { hn: {}, ph: {}, ret: {}, key: {} };
     } catch (error) {
@@ -242,10 +275,14 @@ function App() {
       setStaffingRequirements(requirements);
       setStaffingCommitments(commitments);
       
-      // Persist to LocalStorage
+      // Persist to LocalStorage with timestamp
       try {
+        const now = new Date().toISOString();
         localStorage.setItem('wfm_staffing_requirements', JSON.stringify(requirements));
+        localStorage.setItem('wfm_staffing_requirements_date', now);
         localStorage.setItem('wfm_staffing_commitments', JSON.stringify(commitments));
+        localStorage.setItem('wfm_staffing_commitments_date', now);
+        console.log('✅ Staffing data saved with timestamp:', now);
       } catch (error) {
         console.error('Failed to save staffing data:', error);
         alert('⚠️ Warning: Could not save staffing data. Changes may be lost on refresh.');

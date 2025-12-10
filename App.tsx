@@ -35,6 +35,31 @@ const INITIAL_AGENTS: Agent[] = [
 ];
 
 function App() {
+    // Mostrar notificación push FCM cuando llega en primer plano
+    useEffect(() => {
+        if (!messaging) return;
+        const unsubscribe = onMessage(messaging, (payload) => {
+            console.log('🔔 Mensaje FCM recibido en primer plano:', payload);
+            if (payload.notification && Notification.permission === 'granted') {
+                const { title, body } = payload.notification;
+                try {
+                    const notification = new Notification(title || 'Notificación', {
+                        body: body || '',
+                        icon: '/favicon.ico',
+                        tag: 'fcm-push-notification',
+                        requireInteraction: false
+                    });
+                    notification.onclick = () => {
+                        window.focus();
+                        notification.close();
+                    };
+                } catch (error) {
+                    console.error('❌ Error mostrando notificación FCM:', error);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
   // Initialize user from localStorage
   const [user, setUser] = useState<User | null>(() => {
     try {

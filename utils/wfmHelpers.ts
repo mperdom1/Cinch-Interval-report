@@ -335,10 +335,13 @@ export const calculateIntervalStats = (
         }
         // NUEVO: Total Offlines suma todos los estados offline
         if (cat === 'Total Offlines') {
-            row.hn = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
-            row.ph = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
-            row.ret = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
-            row.key = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
+            const offlineStates = [
+                'ACW_Outbound', 'Training', 'Meeting', 'Coaching', 'Off Phone', 'Unscheduled break', 'System Issue', 'Mentoring'
+            ];
+            row.hn = agents.filter(a => (a.role === 'HN' || (a.lob && a.lob.toLowerCase().includes('hn'))) && offlineStates.includes(a.state)).length;
+            row.ph = agents.filter(a => (a.role === 'PH' || (a.lob && a.lob.toLowerCase().includes('ph'))) && offlineStates.includes(a.state)).length;
+            row.ret = agents.filter(a => (a.role === 'Ret' || (a.lob && a.lob.toLowerCase().includes('ret'))) && offlineStates.includes(a.state)).length;
+            row.key = agents.filter(a => (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key'))) && offlineStates.includes(a.state)).length;
         }
         if (cat === 'Avail Status') {
             // Contar solo agentes con estado 'Available' y LOB correspondiente
@@ -348,16 +351,14 @@ export const calculateIntervalStats = (
             row.key = agents.filter(a => a.state === 'Available' && (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key')))).length;
         }
         if (cat === 'AUX') {
-            // AUX = Meal + Total Offlines + Break
-            const hnOfflines = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
-            const phOfflines = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
-            const retOfflines = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
-            const keyOfflines = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
-
-            row.hn = counts.HN.meal + hnOfflines + counts.HN.break;
-            row.ph = counts.PH.meal + phOfflines + counts.PH.break;
-            row.ret = counts.Ret.meal + retOfflines + counts.Ret.break;
-            row.key = counts.Key.meal + keyOfflines + counts.Key.break;
+            // AUX = Total Offlines + Break + Meal (usando los valores ya calculados en las filas)
+            const totalOfflinesRow = stats.find(r => r.label === 'Total Offlines');
+            const breakRow = stats.find(r => r.label === 'Break');
+            const mealRow = stats.find(r => r.label === 'Meal');
+            row.hn = (totalOfflinesRow?.hn || 0) + (breakRow?.hn || 0) + (mealRow?.hn || 0);
+            row.ph = (totalOfflinesRow?.ph || 0) + (breakRow?.ph || 0) + (mealRow?.ph || 0);
+            row.ret = (totalOfflinesRow?.ret || 0) + (breakRow?.ret || 0) + (mealRow?.ret || 0);
+            row.key = (totalOfflinesRow?.key || 0) + (breakRow?.key || 0) + (mealRow?.key || 0);
         }
         if (cat === 'Break') {
             row.hn = counts.HN.break; row.ph = counts.PH.break; row.ret = counts.Ret.break; row.key = counts.Key.break;

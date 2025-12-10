@@ -20,6 +20,9 @@ import {
   getStaffingCommitmentsFromFirebase,
   getAgentsFromFirebase
 } from './services/firebaseService';
+import { ActiveAgentTable } from './components/ActiveAgentTable';
+import { messaging } from './firebase';
+import { getToken, onMessage } from 'firebase/messaging';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -128,15 +131,17 @@ function App() {
               // Load roster
               const rosterData = await getRosterFromFirebase();
               if (rosterData && Array.isArray(rosterData)) {
-                  const rosterMap: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'> = {};
-                  rosterData.forEach(agent => {
-                      rosterMap[agent.id] = agent.role;
-                  });
-                  setRoster(rosterMap);
-                  const now = new Date();
-                  const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-                  setRosterDate(dateStr);
-                  console.log('✅ Loaded roster from Firebase:', Object.keys(rosterMap).length, 'agents');
+                const rosterMap: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'> = {};
+                rosterData.forEach(agent => {
+                                    if (['HN', 'PH', 'Ret', 'Key'].includes(agent.role)) {
+                                        rosterMap[agent.id] = agent.role as 'HN' | 'PH' | 'Ret' | 'Key';
+                                    }
+                });
+                setRoster(rosterMap);
+                const now = new Date();
+                const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+                setRosterDate(dateStr);
+                console.log('✅ Loaded roster from Firebase:', Object.keys(rosterMap).length, 'agents');
               }
 
               // Load staffing requirements
@@ -239,7 +244,9 @@ function App() {
           // Convert roster array back to map
           const rosterMap: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'> = {};
           data.roster.forEach(agent => {
-              rosterMap[agent.id] = agent.role;
+                        if (['HN', 'PH', 'Ret', 'Key'].includes(agent.role)) {
+                            rosterMap[agent.id] = agent.role as 'HN' | 'PH' | 'Ret' | 'Key';
+                        }
           });
           
           setRoster(rosterMap);
@@ -452,6 +459,37 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
       }
   }, [intervalData]);
 
+  // Initialize Firebase Messaging and request FCM token
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          getToken(messaging, { vapidKey: 'BC3Bh8fU10ebiJxl5de3fk-uzIQaxbzvdCg_4T9tHOL_MXLZ5NQPYwCWAPzvL1l2b3zJLMAiycvELhqIB0MGuIU', serviceWorkerRegistration: registration })
+            .then((currentToken) => {
+              if (currentToken) {
+                console.log('FCM Token:', currentToken);
+              } else {
+                console.log('No registration token available. Request permission to generate one.');
+              }
+            })
+            .catch((err) => {
+              console.log('An error occurred while retrieving token. ', err);
+            });
+        });
+    }
+    // Escuchar mensajes en primer plano
+    onMessage(messaging, (payload) => {
+      console.log('Message received. ', payload);
+      // Puedes mostrar una notificación personalizada aquí si quieres
+      if (payload.notification) {
+        new Notification(payload.notification.title, {
+          body: payload.notification.body,
+          icon: '/favicon.ico'
+        });
+      }
+    });
+  }, []);
+
   if (!user) {
       return <LoginScreen onLogin={handleLogin} />;
   }
@@ -584,6 +622,8 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
                   lastUpdated={rosterDate}
                   userEmail={user.email}
               />
+              {/* Mostrar tabla de agentes activos después de pegar el reporte */}
+              <ActiveAgentTable agents={agents} />
            </div>
         )}
 

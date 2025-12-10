@@ -11,7 +11,15 @@ import { MOCK_INTERVAL_DATA } from './constants';
 import { calculateIntervalStats } from './utils/wfmHelpers';
 import { Agent, IntervalRow, User, StaffingRequirements, StaffingCommitments } from './types';
 import { getCurrentInterval, getIntervalStaffing } from './utils/staffingHelpers';
-import { subscribeToAgentUpdates, subscribeToRosterUpdates, subscribeToStaffingUpdates } from './services/firebaseService';
+import { 
+  subscribeToAgentUpdates, 
+  subscribeToRosterUpdates, 
+  subscribeToStaffingUpdates,
+  getRosterFromFirebase,
+  getStaffingRequirementsFromFirebase,
+  getStaffingCommitmentsFromFirebase,
+  getAgentsFromFirebase
+} from './services/firebaseService';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -39,98 +47,16 @@ function App() {
   const [showHelper, setShowHelper] = useState(false);
   const [intervalData, setIntervalData] = useState<IntervalRow[]>(MOCK_INTERVAL_DATA);
   
-  // Initialize Agents from LocalStorage
-  const [agents, setAgents] = useState<Agent[]>(() => {
-    try {
-      const saved = localStorage.getItem('wfm_agents_data');
-      if (!saved) return INITIAL_AGENTS;
-      const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_AGENTS;
-    } catch (error) {
-      console.error('Failed to load agents from storage:', error);
-      return INITIAL_AGENTS;
-    }
-  });
+  // Initialize Agents - will load from Firebase
+  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   
-  // Initialize Roster from LocalStorage to persist data across sessions
-  const [roster, setRoster] = useState<Record<string, 'HN' | 'PH' | 'Ret' | 'Key'>>(() => {
-    try {
-      const saved = localStorage.getItem('wfm_roster_data');
-      if (!saved) return {};
-      const parsed = JSON.parse(saved);
-      return typeof parsed === 'object' && parsed !== null ? parsed : {};
-    } catch (error) {
-      console.error('Failed to load roster from storage:', error);
-      return {};
-    }
-  });
+  // Initialize Roster - will load from Firebase
+  const [roster, setRoster] = useState<Record<string, 'HN' | 'PH' | 'Ret' | 'Key'>>({});
+  const [rosterDate, setRosterDate] = useState<string | null>(null);
 
-  const [rosterDate, setRosterDate] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('wfm_roster_date');
-    } catch (error) {
-      console.error('Failed to load roster date:', error);
-      return null;
-    }
-  });
-
-  // Staffing Requirements and Commitments
-  const [staffingRequirements, setStaffingRequirements] = useState<StaffingRequirements>(() => {
-    try {
-      const saved = localStorage.getItem('wfm_staffing_requirements');
-      const savedDate = localStorage.getItem('wfm_staffing_requirements_date');
-      
-      if (!saved || !savedDate) return { hn: {}, ph: {}, ret: {}, key: {} };
-      
-      // Check if it's Monday and data is from last week
-      const now = new Date();
-      const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const savedTimestamp = new Date(savedDate);
-      const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // If it's Monday (1) and data is older than 7 days, clear it
-      if (currentDay === 1 && daysDiff >= 7) {
-        console.log('🗓️ New week detected - clearing old staffing data');
-        localStorage.removeItem('wfm_staffing_requirements');
-        localStorage.removeItem('wfm_staffing_requirements_date');
-        localStorage.removeItem('wfm_staffing_commitments');
-        localStorage.removeItem('wfm_staffing_commitments_date');
-        return { hn: {}, ph: {}, ret: {}, key: {} };
-      }
-      
-      const parsed = JSON.parse(saved);
-      return typeof parsed === 'object' && parsed !== null ? parsed : { hn: {}, ph: {}, ret: {}, key: {} };
-    } catch (error) {
-      console.error('Failed to load staffing requirements:', error);
-      return { hn: {}, ph: {}, ret: {}, key: {} };
-    }
-  });
-
-  const [staffingCommitments, setStaffingCommitments] = useState<StaffingCommitments>(() => {
-    try {
-      const saved = localStorage.getItem('wfm_staffing_commitments');
-      const savedDate = localStorage.getItem('wfm_staffing_commitments_date');
-      
-      if (!saved || !savedDate) return { hn: {}, ph: {}, ret: {}, key: {} };
-      
-      // Check if it's Monday and data is from last week
-      const now = new Date();
-      const currentDay = now.getDay();
-      const savedTimestamp = new Date(savedDate);
-      const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // If it's Monday (1) and data is older than 7 days, clear it
-      if (currentDay === 1 && daysDiff >= 7) {
-        return { hn: {}, ph: {}, ret: {}, key: {} };
-      }
-      
-      const parsed = JSON.parse(saved);
-      return typeof parsed === 'object' && parsed !== null ? parsed : { hn: {}, ph: {}, ret: {}, key: {} };
-    } catch (error) {
-      console.error('Failed to load staffing commitments:', error);
-      return { hn: {}, ph: {}, ret: {}, key: {} };
-    }
-  });
+  // Staffing Requirements and Commitments - will load from Firebase
+  const [staffingRequirements, setStaffingRequirements] = useState<StaffingRequirements>({ hn: {}, ph: {}, ret: {}, key: {} });
+  const [staffingCommitments, setStaffingCommitments] = useState<StaffingCommitments>({ hn: {}, ph: {}, ret: {}, key: {} });
 
   // Calculate initial stats on load
   useEffect(() => {
@@ -164,6 +90,56 @@ function App() {
           });
       }
   }, []);
+
+  // Load initial data from Firebase when user logs in
+  useEffect(() => {
+      if (!user) return;
+
+      const loadInitialData = async () => {
+          console.log('🔥 Loading initial data from Firebase...');
+          
+          try {
+              // Load roster
+              const rosterData = await getRosterFromFirebase();
+              if (rosterData && Array.isArray(rosterData)) {
+                  const rosterMap: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'> = {};
+                  rosterData.forEach(agent => {
+                      rosterMap[agent.id] = agent.role;
+                  });
+                  setRoster(rosterMap);
+                  const now = new Date();
+                  const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+                  setRosterDate(dateStr);
+                  console.log('✅ Loaded roster from Firebase:', Object.keys(rosterMap).length, 'agents');
+              }
+
+              // Load staffing requirements
+              const requirements = await getStaffingRequirementsFromFirebase();
+              if (requirements) {
+                  setStaffingRequirements(requirements);
+                  console.log('✅ Loaded staffing requirements from Firebase');
+              }
+
+              // Load staffing commitments
+              const commitments = await getStaffingCommitmentsFromFirebase();
+              if (commitments) {
+                  setStaffingCommitments(commitments);
+                  console.log('✅ Loaded staffing commitments from Firebase');
+              }
+
+              // Load agents
+              const agentsData = await getAgentsFromFirebase();
+              if (agentsData && Array.isArray(agentsData) && agentsData.length > 0) {
+                  setAgents(agentsData);
+                  console.log('✅ Loaded agents from Firebase:', agentsData.length, 'agents');
+              }
+          } catch (error) {
+              console.error('❌ Error loading initial data from Firebase:', error);
+          }
+      };
+
+      loadInitialData();
+  }, [user]);
 
   // Subscribe to agent updates from Firebase
   useEffect(() => {
@@ -217,14 +193,6 @@ function App() {
           const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
           setRosterDate(dateStr);
           
-          // Save to localStorage
-          try {
-              localStorage.setItem('wfm_roster_data', JSON.stringify(rosterMap));
-              localStorage.setItem('wfm_roster_date', dateStr);
-          } catch (error) {
-              console.error('Failed to save roster to localStorage:', error);
-          }
-          
           // Only show notification if update is from someone else
           if (data.updatedBy !== user.email) {
               if ('Notification' in window && Notification.permission === 'granted') {
@@ -248,17 +216,6 @@ function App() {
           
           setStaffingRequirements(data.requirements);
           setStaffingCommitments(data.commitments);
-          
-          // Save to localStorage
-          try {
-              const now = new Date().toISOString();
-              localStorage.setItem('wfm_staffing_requirements', JSON.stringify(data.requirements));
-              localStorage.setItem('wfm_staffing_requirements_date', now);
-              localStorage.setItem('wfm_staffing_commitments', JSON.stringify(data.commitments));
-              localStorage.setItem('wfm_staffing_commitments_date', now);
-          } catch (error) {
-              console.error('Failed to save staffing to localStorage:', error);
-          }
           
           // Recalculate interval stats
           if (agents.length > 0) {
@@ -309,34 +266,14 @@ function App() {
       const newStats = calculateIntervalStats(newAgents, staffing.required, staffing.committed);
       setIntervalData(newStats);
       setActiveTab('dashboard');
-      
-      // Save agents to localStorage
-      try {
-        localStorage.setItem('wfm_agents_data', JSON.stringify(newAgents));
-      } catch (error) {
-        console.error('Failed to save agents to localStorage:', error);
-      }
-
-      // Send notification
       sendNotification(newAgents.length);
   }, [staffingRequirements, staffingCommitments, sendNotification]);
 
   const handleRosterUpdate = useCallback((newRoster: Record<string, 'HN' | 'PH' | 'Ret' | 'Key'>) => {
       setRoster(newRoster);
-      
-      // Save metadata
       const now = new Date();
       const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
       setRosterDate(dateStr);
-
-      // Persist to LocalStorage with error handling
-      try {
-        localStorage.setItem('wfm_roster_data', JSON.stringify(newRoster));
-        localStorage.setItem('wfm_roster_date', dateStr);
-      } catch (error) {
-        console.error('Failed to save roster to localStorage:', error);
-        alert('⚠️ Warning: Could not save roster data. Changes may be lost on refresh.');
-      }
 
       // If agents exist, re-map them immediately
       if (agents.length > 0) {
@@ -358,19 +295,6 @@ function App() {
   const handleStaffingUpdate = useCallback((requirements: StaffingRequirements, commitments: StaffingCommitments) => {
       setStaffingRequirements(requirements);
       setStaffingCommitments(commitments);
-      
-      // Persist to LocalStorage with timestamp
-      try {
-        const now = new Date().toISOString();
-        localStorage.setItem('wfm_staffing_requirements', JSON.stringify(requirements));
-        localStorage.setItem('wfm_staffing_requirements_date', now);
-        localStorage.setItem('wfm_staffing_commitments', JSON.stringify(commitments));
-        localStorage.setItem('wfm_staffing_commitments_date', now);
-        console.log('✅ Staffing data saved with timestamp:', now);
-      } catch (error) {
-        console.error('Failed to save staffing data:', error);
-        alert('⚠️ Warning: Could not save staffing data. Changes may be lost on refresh.');
-      }
 
       // Recalculate interval stats with new staffing data
       if (agents.length > 0) {

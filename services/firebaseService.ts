@@ -5,9 +5,21 @@ import type { Agent, StaffingRequirements, StaffingCommitments } from '../types'
 // Save roster data to Firebase
 export const saveRosterToFirebase = async (roster: Agent[]): Promise<void> => {
   try {
+    // Clean roster data to ensure all properties are defined
+    const cleanedRoster = roster.map(agent => ({
+      id: agent.id || '',
+      name: agent.name || '',
+      state: agent.state || '',
+      duration: agent.duration || '',
+      station: agent.station || '',
+      team: agent.team || '',
+      skill: agent.skill || '',
+      role: agent.role || 'HN'
+    }));
+    
     const rosterRef = ref(realtimeDb, 'roster');
     await set(rosterRef, {
-      data: roster,
+      data: cleanedRoster,
       lastUpdated: new Date().toISOString()
     });
     console.log('Roster saved to Firebase');
@@ -50,9 +62,21 @@ export const saveStaffingCommitmentsToFirebase = async (commitments: StaffingCom
 // Save agent data to Firebase
 export const saveAgentsToFirebase = async (agents: Agent[]): Promise<void> => {
   try {
+    // Clean agents data to ensure all properties are defined
+    const cleanedAgents = agents.map(agent => ({
+      id: agent.id || '',
+      name: agent.name || '',
+      state: agent.state || '',
+      duration: agent.duration || '',
+      station: agent.station || '',
+      team: agent.team || '',
+      skill: agent.skill || '',
+      role: agent.role || 'HN'
+    }));
+    
     const agentsRef = ref(realtimeDb, 'agents');
     await set(agentsRef, {
-      data: agents,
+      data: cleanedAgents,
       lastUpdated: new Date().toISOString()
     });
     console.log('Agents data saved to Firebase');
@@ -168,12 +192,24 @@ export const subscribeToStaffingUpdates = (callback: (data: { requirements: Staf
 // Trigger agent update notification for all users
 export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy: string): Promise<void> => {
   try {
+    // Clean agents data to ensure all properties are defined
+    const cleanedAgents = agents.map(agent => ({
+      id: agent.id || '',
+      name: agent.name || '',
+      state: agent.state || '',
+      duration: agent.duration || '',
+      station: agent.station || '',
+      team: agent.team || '',
+      skill: agent.skill || '',
+      role: agent.role || 'HN'
+    }));
+    
     const updateRef = ref(realtimeDb, 'agentUpdates/latest');
     await set(updateRef, {
-      agents: agents,
+      agents: cleanedAgents,
       timestamp: new Date().toISOString(),
       updatedBy: updatedBy,
-      count: agents.length
+      count: cleanedAgents.length
     });
     console.log('Agent update notification triggered');
   } catch (error) {
@@ -185,9 +221,21 @@ export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy:
 // Trigger roster update notification
 export const triggerRosterUpdateNotification = async (roster: Agent[], updatedBy: string): Promise<void> => {
   try {
+    // Clean roster data to ensure all properties are defined
+    const cleanedRoster = roster.map(agent => ({
+      id: agent.id || '',
+      name: agent.name || '',
+      state: agent.state || '',
+      duration: agent.duration || '',
+      station: agent.station || '',
+      team: agent.team || '',
+      skill: agent.skill || '',
+      role: agent.role || 'HN'
+    }));
+    
     const updateRef = ref(realtimeDb, 'rosterUpdates/latest');
     await set(updateRef, {
-      roster: roster,
+      roster: cleanedRoster,
       timestamp: new Date().toISOString(),
       updatedBy: updatedBy
     });

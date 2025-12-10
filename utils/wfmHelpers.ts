@@ -341,7 +341,11 @@ export const calculateIntervalStats = (
             row.key = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
         }
         if (cat === 'Avail Status') {
-            row.hn = counts.HN.avail; row.ph = counts.PH.avail; row.ret = counts.Ret.avail; row.key = counts.Key.avail;
+            // Contar solo agentes con estado 'Available' y LOB correspondiente
+            row.hn = agents.filter(a => a.state === 'Available' && (a.role === 'HN' || (a.lob && a.lob.toLowerCase().includes('hn')))).length;
+            row.ph = agents.filter(a => a.state === 'Available' && (a.role === 'PH' || (a.lob && a.lob.toLowerCase().includes('ph')))).length;
+            row.ret = agents.filter(a => a.state === 'Available' && (a.role === 'Ret' || (a.lob && a.lob.toLowerCase().includes('ret')))).length;
+            row.key = agents.filter(a => a.state === 'Available' && (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key')))).length;
         }
         if (cat === 'AUX') {
             // AUX = Meal + Total Offlines + Break

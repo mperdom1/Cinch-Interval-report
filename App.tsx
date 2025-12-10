@@ -78,16 +78,42 @@ function App() {
 
   // Request notification permission on mount
   useEffect(() => {
-      if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                  console.log('✅ Notification permission granted.');
-              } else if (permission === 'denied') {
-                  console.log('❌ Notification permission denied.');
-              } else {
-                  console.log('⚠️ Notification permission status is default.');
-              }
-          });
+      console.log('🔔 Checking notification support...');
+      console.log('Notification API available:', 'Notification' in window);
+      
+      if ('Notification' in window) {
+          console.log('Current permission:', Notification.permission);
+          
+          if (Notification.permission === 'default') {
+              console.log('⚠️ Requesting notification permission...');
+              Notification.requestPermission().then(permission => {
+                  console.log('Permission response:', permission);
+                  if (permission === 'granted') {
+                      console.log('✅ Notification permission granted.');
+                      // Test notification
+                      try {
+                          const testNotification = new Notification('🎉 Notifications Enabled!', {
+                              body: 'You will now receive real-time updates',
+                              icon: '/favicon.ico',
+                              tag: 'test-notification'
+                          });
+                          setTimeout(() => testNotification.close(), 3000);
+                      } catch (error) {
+                          console.error('❌ Error creating test notification:', error);
+                      }
+                  } else if (permission === 'denied') {
+                      console.log('❌ Notification permission denied.');
+                  } else {
+                      console.log('⚠️ Notification permission status is default.');
+                  }
+              });
+          } else if (Notification.permission === 'granted') {
+              console.log('✅ Notification permission already granted');
+          } else {
+              console.log('❌ Notification permission denied');
+          }
+      } else {
+          console.log('❌ Notification API not supported in this browser');
       }
   }, []);
 
@@ -162,16 +188,44 @@ function App() {
           setIntervalData(calculateIntervalStats(data.agents, staffing.required, staffing.committed));
           
           // Only show notification if update is from someone else
+          console.log('🔔 Checking notification conditions:', {
+              notificationAPI: 'Notification' in window,
+              permission: 'Notification' in window ? Notification.permission : 'N/A',
+              isDifferentUser: data.updatedBy !== user.email,
+              updatedBy: data.updatedBy,
+              currentUser: user.email
+          });
+          
           if (data.updatedBy !== user.email) {
-              if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification('🔔 Agent Report Updated', {
-                      body: `Updated by ${data.updatedBy}\n${data.count} active agents`,
-                      icon: '/favicon.ico',
-                      badge: '/favicon.ico',
-                      tag: 'agent-update-realtime',
-                      requireInteraction: false
-                  });
+              console.log('✅ Different user detected, attempting notification...');
+              if ('Notification' in window) {
+                  console.log('✅ Notification API available, permission:', Notification.permission);
+                  if (Notification.permission === 'granted') {
+                      console.log('✅ Permission granted, creating notification...');
+                      try {
+                          const notification = new Notification('🔔 Agent Report Updated', {
+                              body: `Updated by ${data.updatedBy}\n${data.count} active agents`,
+                              icon: '/favicon.ico',
+                              tag: 'agent-update-realtime',
+                              requireInteraction: false
+                          });
+                          console.log('✅ Notification created successfully:', notification);
+                          
+                          notification.onclick = () => {
+                              window.focus();
+                              notification.close();
+                          };
+                      } catch (error) {
+                          console.error('❌ Error creating notification:', error);
+                      }
+                  } else {
+                      console.warn('⚠️ Notification permission not granted:', Notification.permission);
+                  }
+              } else {
+                  console.warn('⚠️ Notification API not available');
               }
+          } else {
+              console.log('ℹ️ Same user - skipping notification');
           }
       });
 
@@ -195,14 +249,23 @@ function App() {
           
           // Only show notification if update is from someone else
           if (data.updatedBy !== user.email) {
+              console.log('📋 Attempting roster notification...');
               if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification('📋 Roster Updated', {
-                      body: `Updated by ${data.updatedBy}`,
-                      icon: '/favicon.ico',
-                      badge: '/favicon.ico',
-                      tag: 'roster-update-realtime',
-                      requireInteraction: false
-                  });
+                  try {
+                      const notification = new Notification('📋 Roster Updated', {
+                          body: `Updated by ${data.updatedBy}`,
+                          icon: '/favicon.ico',
+                          tag: 'roster-update-realtime',
+                          requireInteraction: false
+                      });
+                      console.log('✅ Roster notification created');
+                      notification.onclick = () => {
+                          window.focus();
+                          notification.close();
+                      };
+                  } catch (error) {
+                      console.error('❌ Error creating roster notification:', error);
+                  }
               }
           }
       });
@@ -226,14 +289,23 @@ function App() {
           
           // Only show notification if update is from someone else
           if (data.updatedBy !== user.email) {
+              console.log('📊 Attempting staffing notification...');
               if ('Notification' in window && Notification.permission === 'granted') {
-                  new Notification('📊 Staffing Data Updated', {
-                      body: `Updated by ${data.updatedBy}`,
-                      icon: '/favicon.ico',
-                      badge: '/favicon.ico',
-                      tag: 'staffing-update-realtime',
-                      requireInteraction: false
-                  });
+                  try {
+                      const notification = new Notification('📊 Staffing Data Updated', {
+                          body: `Updated by ${data.updatedBy}`,
+                          icon: '/favicon.ico',
+                          tag: 'staffing-update-realtime',
+                          requireInteraction: false
+                      });
+                      console.log('✅ Staffing notification created');
+                      notification.onclick = () => {
+                          window.focus();
+                          notification.close();
+                      };
+                  } catch (error) {
+                      console.error('❌ Error creating staffing notification:', error);
+                  }
               }
           }
       });

@@ -337,6 +337,13 @@ export const calculateIntervalStats = (
         if (cat === 'Total Active') {
             row.hn = counts.HN.total; row.ph = counts.PH.total; row.ret = counts.Ret.total; row.key = counts.Key.total;
         }
+        // NUEVO: Total Offlines suma todos los estados offline
+        if (cat === 'Total Offlines') {
+            row.hn = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
+            row.ph = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
+            row.ret = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
+            row.key = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
+        }
         if (cat === 'Avail Status') {
             row.hn = counts.HN.avail; row.ph = counts.PH.avail; row.ret = counts.Ret.avail; row.key = counts.Key.avail;
         }
@@ -355,13 +362,16 @@ export const calculateIntervalStats = (
         if (cat === 'Training') {
             row.hn = counts.HN.training; row.ph = counts.PH.training; row.ret = counts.Ret.training; row.key = counts.Key.training;
         }
-        // "Actual" in this context usually means Productive Staffing or Logged In - Break.
-        // Formula: Total Active - Break. 
+        // "Actual" ahora es Total Active - Total Offlines
         if (cat === 'Actual') {
-             row.hn = counts.HN.total - counts.HN.break; 
-             row.ph = counts.PH.total - counts.PH.break; 
-             row.ret = counts.Ret.total - counts.Ret.break; 
-             row.key = counts.Key.total - counts.Key.break;
+            const hnOffline = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
+            const phOffline = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
+            const retOffline = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
+            const keyOffline = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
+            row.hn = counts.HN.total - hnOffline;
+            row.ph = counts.PH.total - phOffline;
+            row.ret = counts.Ret.total - retOffline;
+            row.key = counts.Key.total - keyOffline;
         }
         // HC Required - from staffing data
         if (cat === 'HC Required') {

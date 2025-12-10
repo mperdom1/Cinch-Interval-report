@@ -203,7 +203,7 @@ export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy:
       skill: agent.skill || '',
       role: agent.role || 'HN'
     }));
-    
+
     const updateRef = ref(realtimeDb, 'agentUpdates/latest');
     await set(updateRef, {
       agents: cleanedAgents,
@@ -212,6 +212,20 @@ export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy:
       count: cleanedAgents.length
     });
     console.log('Agent update notification triggered');
+
+    // Llamar al endpoint del backend para enviar la notificación FCM
+    try {
+      await fetch('http://localhost:3001/notify-staffing-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ updatedBy })
+      });
+      console.log('Notificación FCM enviada a través del backend');
+    } catch (notifyError) {
+      console.error('Error enviando notificación FCM:', notifyError);
+    }
   } catch (error) {
     console.error('Error triggering agent update notification:', error);
     throw error;

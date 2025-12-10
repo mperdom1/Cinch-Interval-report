@@ -386,14 +386,12 @@ export const calculateIntervalStats = (
         }
         // "Actual" ahora es Total Active - Total Offlines
         if (cat === 'Actual') {
-            const hnOffline = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
-            const phOffline = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
-            const retOffline = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
-            const keyOffline = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
-            row.hn = counts.HN.total - hnOffline;
-            row.ph = counts.PH.total - phOffline;
-            row.ret = counts.Ret.total - retOffline;
-            row.key = counts.Key.total - keyOffline;
+              // Actual = Total Active - AUX
+              const auxRow = stats.find(r => r.label === 'AUX');
+              row.hn = counts.HN.total - (auxRow?.hn || 0);
+              row.ph = counts.PH.total - (auxRow?.ph || 0);
+              row.ret = counts.Ret.total - (auxRow?.ret || 0);
+              row.key = counts.Key.total - (auxRow?.key || 0);
         }
         // HC Required - from staffing data
         if (cat === 'HC Required') {

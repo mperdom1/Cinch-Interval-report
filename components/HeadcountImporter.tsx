@@ -20,6 +20,16 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
     const [processedCount, setProcessedCount] = useState<number | null>(null);
     const [isEditingRoster, setIsEditingRoster] = useState(false);
     const [isEditingStaffing, setIsEditingStaffing] = useState(false);
+    
+    // Individual staffing boxes
+    const [hnReqText, setHnReqText] = useState('');
+    const [hnComText, setHnComText] = useState('');
+    const [phReqText, setPhReqText] = useState('');
+    const [phComText, setPhComText] = useState('');
+    const [retReqText, setRetReqText] = useState('');
+    const [retComText, setRetComText] = useState('');
+    const [keyReqText, setKeyReqText] = useState('');
+    const [keyComText, setKeyComText] = useState('');
 
     // Save the Roster Mapping
     const handleRosterProcess = async () => {
@@ -103,15 +113,92 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
         }
     };
 
+    // Parse individual staffing box
+    const parseStaffingBox = (text: string): Record<string, number> => {
+        const result: Record<string, number> = {};
+        if (!text.trim()) return result;
+        
+        const lines = text.trim().split('\n');
+        
+        // Find today's date column
+        const today = new Date();
+        const estDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const todayDate = estDate.getDate();
+        const todayMonth = estDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short' });
+        
+        let dayColumnIndex = -1;
+        let headerLine: string[] = [];
+        
+        for (const line of lines) {
+            const cols = line.split('\t').map(c => c.trim());
+            
+            // Find header with dates
+            if (line.toLowerCase().includes('interval') && cols.length > 1) {
+                headerLine = cols;
+                
+                for (let i = 1; i < headerLine.length; i++) {
+                    const col = headerLine[i].trim();
+                    const match = col.match(/(\d{1,2})[-\s]?(\w{3})/i);
+                    if (match) {
+                        const colDay = parseInt(match[1]);
+                        const colMonth = match[2];
+                        if (colDay === todayDate && colMonth.toLowerCase() === todayMonth.toLowerCase()) {
+                            dayColumnIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (dayColumnIndex === -1) dayColumnIndex = 1; // Fallback
+                continue;
+            }
+            
+            // Parse data rows
+            if (cols[0] && cols[0].includes(':')) {
+                const interval = cols[0];
+                const value = parseInt(cols[dayColumnIndex] || '0');
+                if (!isNaN(value)) {
+                    result[interval] = value;
+                }
+            }
+        }
+        
+        return result;
+    };
+
     const handleStaffingProcess = async () => {
         try {
-            if (!staffingText.trim()) {
-                alert('⚠️ Please paste staffing requirements and commitments data before processing.');
-                return;
+            // Check if using box-by-box or single paste
+            const usingBoxes = hnReqText || hnComText || phReqText || phComText || retReqText || retComText || keyReqText || keyComText;
+            
+            let requirements: StaffingRequirements;
+            let commitments: StaffingCommitments;
+            
+            if (usingBoxes) {
+                // Parse each box individually
+                requirements = {
+                    hn: parseStaffingBox(hnReqText),
+                    ph: parseStaffingBox(phReqText),
+                    ret: parseStaffingBox(retReqText),
+                    key: parseStaffingBox(keyReqText)
+                };
+                
+                commitments = {
+                    hn: parseStaffingBox(hnComText),
+                    ph: parseStaffingBox(phComText),
+                    ret: parseStaffingBox(retComText),
+                    key: parseStaffingBox(keyComText)
+                };
+            } else {
+                // Original method - parse from single paste
+                if (!staffingText.trim()) {
+                    alert('⚠️ Please paste staffing data.');
+                    return;
+                }
+                
+                requirements = parseStaffingRequirements(staffingText);
+                commitments = parseStaffingCommitments(staffingText);
             }
-
-            const requirements = parseStaffingRequirements(staffingText);
-            const commitments = parseStaffingCommitments(staffingText);
             
             const reqCount = Object.keys(requirements.hn).length + Object.keys(requirements.ph).length + 
                            Object.keys(requirements.ret).length + Object.keys(requirements.key).length;
@@ -153,7 +240,18 @@ Sample Requirements:
 
             onStaffingUpdate(requirements, commitments);
             setIsEditingStaffing(false);
+            
+            // Clear all inputs
             setStaffingText('');
+            setHnReqText('');
+            setHnComText('');
+            setPhReqText('');
+            setPhComText('');
+            setRetReqText('');
+            setRetComText('');
+            setKeyReqText('');
+            setKeyComText('');
+            
             alert(`✅ Staffing data updated successfully!\\n\\n${summary}`);
         } catch (error) {
             console.error('Error processing staffing:', error);
@@ -325,16 +423,93 @@ Sample Requirements:
                     </div>
                 ) : (
                     <div className="animate-[fadeIn_0.2s]">
-                         <p className="text-xs text-gray-500 mb-2">
-                            Paste your staffing tables (Requirements and Commitments). Include all 4 queues: <strong>HN CS, PH CS, Retention, Key Client Support</strong>.
+                         <p className="text-xs text-gray-500 mb-3">
+                            Paste each staffing table separately below. Copy from Excel/Sheets box by box.
                         </p>
-                        <textarea
-                            className="w-full h-40 p-3 border border-gray-300 rounded text-xs font-mono focus:ring-2 focus:ring-purple-500 outline-none mb-2 bg-gray-50"
-                            placeholder="Paste your Staffing Requirements and Commitments tables here (from the screenshot you shared)..."
-                            value={staffingText}
-                            onChange={(e) => setStaffingText(e.target.value)}
-                            aria-label="Staffing requirements and commitments data input"
-                        />
+                        
+                        {/* Box-by-Box Input Grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            {/* HN CS */}
+                            <div>
+                                <label className="text-xs font-bold text-blue-700 mb-1 block">HN CS Requirement</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-blue-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  10&#10;8:30 AM  12..."
+                                    value={hnReqText}
+                                    onChange={(e) => setHnReqText(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-green-700 mb-1 block">HN CS Commitment</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-green-300 rounded text-xs font-mono focus:ring-2 focus:ring-green-500 outline-none bg-green-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  10&#10;8:30 AM  12..."
+                                    value={hnComText}
+                                    onChange={(e) => setHnComText(e.target.value)}
+                                />
+                            </div>
+                            
+                            {/* PH CS */}
+                            <div>
+                                <label className="text-xs font-bold text-blue-700 mb-1 block">PH CS Requirement</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-blue-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  23&#10;8:30 AM  25..."
+                                    value={phReqText}
+                                    onChange={(e) => setPhReqText(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-green-700 mb-1 block">PH CS Commitment</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-green-300 rounded text-xs font-mono focus:ring-2 focus:ring-green-500 outline-none bg-green-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  23&#10;8:30 AM  25..."
+                                    value={phComText}
+                                    onChange={(e) => setPhComText(e.target.value)}
+                                />
+                            </div>
+                            
+                            {/* Retention */}
+                            <div>
+                                <label className="text-xs font-bold text-blue-700 mb-1 block">Retention Requirement</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-blue-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  0&#10;8:30 AM  0..."
+                                    value={retReqText}
+                                    onChange={(e) => setRetReqText(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-green-700 mb-1 block">Retention Commitment</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-green-300 rounded text-xs font-mono focus:ring-2 focus:ring-green-500 outline-none bg-green-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  0&#10;8:30 AM  0..."
+                                    value={retComText}
+                                    onChange={(e) => setRetComText(e.target.value)}
+                                />
+                            </div>
+                            
+                            {/* Key Client Support */}
+                            <div>
+                                <label className="text-xs font-bold text-blue-700 mb-1 block">Key Client Support Requirement</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-blue-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  0&#10;8:30 AM  0..."
+                                    value={keyReqText}
+                                    onChange={(e) => setKeyReqText(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-green-700 mb-1 block">Key Client Support Commitment</label>
+                                <textarea
+                                    className="w-full h-24 p-2 border border-green-300 rounded text-xs font-mono focus:ring-2 focus:ring-green-500 outline-none bg-green-50"
+                                    placeholder="Interval  10-Dec&#10;8:00 AM  0&#10;8:30 AM  0..."
+                                    value={keyComText}
+                                    onChange={(e) => setKeyComText(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        
                         <div className="flex justify-end gap-2">
                             <button 
                                 onClick={() => setIsEditingStaffing(false)}

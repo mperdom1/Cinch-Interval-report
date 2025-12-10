@@ -313,20 +313,16 @@ export const calculateIntervalStats = (
             counts[role].avail++;
         } else if (mapping.type === 'Off Queue') {
             counts[role].aux++;
-            
-            // Sub-categories
+            // Sub-categories (solo suma 1 por estado)
             if (mapping.code === 'Break') counts[role].break++;
             if (mapping.code === 'Meeting') counts[role].meeting++;
             if (mapping.code === 'Coaching') counts[role].coaching++;
             if (mapping.code === 'Training') counts[role].training++;
-            if (mapping.code === 'ACW') counts[role].acw++;
-            if (mapping.code === 'ACW_Outbound') {
-                counts[role].acw++;
-                counts[role].acwOutbound++;
-            }
+            if (mapping.code === 'ACW_Outbound') counts[role].acwOutbound++;
             if (mapping.code === 'Off Phone') counts[role].offPhone++;
             if (mapping.code === 'Unscheduled break') counts[role].unscheduledBreak++;
             if (mapping.code === 'System Issue') counts[role].systemIssue++;
+            if (mapping.code === 'Mentoring') counts[role].mentoring++;
         }
     });
 
@@ -348,7 +344,16 @@ export const calculateIntervalStats = (
             row.hn = counts.HN.avail; row.ph = counts.PH.avail; row.ret = counts.Ret.avail; row.key = counts.Key.avail;
         }
         if (cat === 'AUX') {
-            row.hn = counts.HN.aux; row.ph = counts.PH.aux; row.ret = counts.Ret.aux; row.key = counts.Key.aux;
+            // AUX = Meal + Total Offlines + Break
+            const hnOfflines = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
+            const phOfflines = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
+            const retOfflines = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
+            const keyOfflines = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
+
+            row.hn = counts.HN.meal + hnOfflines + counts.HN.break;
+            row.ph = counts.PH.meal + phOfflines + counts.PH.break;
+            row.ret = counts.Ret.meal + retOfflines + counts.Ret.break;
+            row.key = counts.Key.meal + keyOfflines + counts.Key.break;
         }
         if (cat === 'Break') {
             row.hn = counts.HN.break; row.ph = counts.PH.break; row.ret = counts.Ret.break; row.key = counts.Key.break;

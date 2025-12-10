@@ -455,10 +455,10 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-2">
         
         {activeTab === 'dashboard' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             
             {/* Top Section: Interval Stats - Visible to ALL */}
             <div className="w-full">
@@ -468,7 +468,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
             </div>
 
             {/* Bottom Section: Conditional based on Role */}
-            <div className="w-full h-[450px]">
+            <div className="w-full h-[380px]">
                 {/* WFM and SUPERVISOR see Alerts */}
                 {(user.role === 'wfm' || user.role === 'supervisor') && (
                     <AgentAlerts agents={agents} />
@@ -485,7 +485,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
                 Usually WFM wants to see everything. Let's add Breakdown for WFM too below alerts.
             */}
             {user.role === 'wfm' && (
-                <div className="w-full h-[400px]">
+                <div className="w-full h-[350px]">
                     <AgentBreakdown agents={agents} />
                 </div>
             )}

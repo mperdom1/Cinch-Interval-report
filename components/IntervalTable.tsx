@@ -69,42 +69,42 @@ const IntervalTable: React.FC<Props> = ({ data }) => {
 
     return (
         <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-            <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-800">Interval Stats (Real-Time)</h2>
-                    <span className="text-sm font-bold text-[#058623]">
+                    <h2 className="text-base font-semibold text-gray-800">Interval Stats (Real-Time)</h2>
+                    <span className="text-xs font-bold text-[#058623]">
                         Current Interval: {currentTimeInterval}
                     </span>
                 </div>
                 <button 
                     onClick={copyTable}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
                     aria-label="Copy table data for chat"
                 >
                     Copy for Chat
                 </button>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-center border-collapse" role="table" aria-label="Interval statistics table">
+                <table className="w-full text-xs text-center border-collapse" role="table" aria-label="Interval statistics table">
                     <thead>
                         <tr>
-                            <th className="border p-2 bg-[#5CCC69] font-bold text-white w-1/3 text-left">Role</th>
-                            <th className="border p-2 bg-white font-bold text-black">CSR HN</th>
-                            <th className="border p-2 bg-white font-bold text-black">CSR PH</th>
-                            <th className="border p-2 bg-white font-bold text-black">Retention</th>
-                            <th className="border p-2 bg-white font-bold text-black">Key Client Support</th>
+                            <th className="border px-2 py-1 bg-[#5CCC69] font-bold text-white w-1/3 text-left text-xs">Role</th>
+                            <th className="border px-2 py-1 bg-white font-bold text-black text-xs">CSR HN</th>
+                            <th className="border px-2 py-1 bg-white font-bold text-black text-xs">CSR PH</th>
+                            <th className="border px-2 py-1 bg-white font-bold text-black text-xs">Retention</th>
+                            <th className="border px-2 py-1 bg-white font-bold text-black text-xs">Key Client Support</th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.map((row, idx) => (
                             <tr key={idx}>
-                                <td className={`border p-1.5 px-3 text-left ${row.color.includes('bg-white') ? 'bg-white font-medium' : row.color.includes('text-white') ? 'font-bold' : 'font-medium'}`}>
+                                <td className={`border px-2 py-0.5 text-left text-xs ${row.color.includes('bg-white') ? 'bg-white font-medium' : row.color.includes('text-white') ? 'font-bold' : 'font-medium'}`}>
                                     {row.label}
                                 </td>
-                                <td className={`border p-1.5 ${row.color}`}>{row.hn}</td>
-                                <td className={`border p-1.5 ${row.color}`}>{row.ph}</td>
-                                <td className={`border p-1.5 ${row.color}`}>{row.ret}</td>
-                                <td className={`border p-1.5 ${row.color}`}>{row.key}</td>
+                                <td className={`border py-0.5 text-xs ${row.color}`}>{row.hn}</td>
+                                <td className={`border py-0.5 text-xs ${row.color}`}>{row.ph}</td>
+                                <td className={`border py-0.5 text-xs ${row.color}`}>{row.ret}</td>
+                                <td className={`border py-0.5 text-xs ${row.color}`}>{row.key}</td>
                             </tr>
                         ))}
                     </tbody>

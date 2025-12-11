@@ -25,6 +25,7 @@ import { messaging } from './firebase';
 import { getToken, onMessage } from 'firebase/messaging';
 import { getDatabase, ref, set } from 'firebase/database';
 import { firebaseProvider } from './services/cloudProvider';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -558,7 +559,12 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                <DotLottieReact
+                  src="https://lottie.host/a38f3f7a-0bbd-4d68-998b-dfb3b94f9834/bEjM9oOwmj.lottie"
+                  loop
+                  autoplay
+                  style={{ width: 32, height: 32, background: 'transparent' }}
+                />
               </div>
               <div>
                   <h1 className="font-bold text-lg tracking-tight">CINCH Interval Staffing</h1>

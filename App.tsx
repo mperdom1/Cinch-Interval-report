@@ -24,6 +24,7 @@ import { ActiveAgentTable } from './components/ActiveAgentTable';
 import { messaging } from './firebase';
 import { getToken, onMessage } from 'firebase/messaging';
 import { getDatabase, ref, set } from 'firebase/database';
+import { firebaseProvider } from './services/cloudProvider';
 
 // Initial Mock Agents for display before paste
 const INITIAL_AGENTS: Agent[] = [
@@ -350,6 +351,18 @@ function App() {
           unsubscribeStaffing();
       };
   }, [user, agents, staffingRequirements, staffingCommitments]);
+
+  // Suscripción en tiempo real a intervalos (actualización automática)
+  useEffect(() => {
+    const unsubscribe = firebaseProvider.subscribe?.((data) => {
+      if (data && Array.isArray(data)) {
+        setIntervalData(data);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const sendNotification = useCallback((agentCount: number) => {
       if ('Notification' in window && Notification.permission === 'granted') {

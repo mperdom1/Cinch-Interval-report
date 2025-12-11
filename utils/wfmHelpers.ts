@@ -333,27 +333,12 @@ export const calculateIntervalStats = (
         if (cat === 'Total Active') {
             row.hn = counts.HN.total; row.ph = counts.PH.total; row.ret = counts.Ret.total; row.key = counts.Key.total;
         }
-        // NUEVO: Total Offlines suma todos los estados offline
+        // Total Offlines = suma de todos los estados Off Queue (AUX)
         if (cat === 'Total Offlines') {
-            const offlineStates = [
-                'ACW_Outbound', 'Training', 'Meeting', 'Coaching', 'Off Phone', 'Unscheduled break', 'System Issue', 'Mentoring'
-            ];
-            row.hn = agents.filter(a =>
-                offlineStates.includes(a.state) &&
-                (a.lob === 'CSR HN' || a.role === 'HN')
-            ).length;
-            row.ph = agents.filter(a =>
-                offlineStates.includes(a.state) &&
-                (a.lob === 'CSR PH' || a.role === 'PH')
-            ).length;
-            row.ret = agents.filter(a =>
-                offlineStates.includes(a.state) &&
-                (a.lob === 'Retention' || a.role === 'Ret')
-            ).length;
-            row.key = agents.filter(a =>
-                offlineStates.includes(a.state) &&
-                (a.lob === 'Key Client Support' || a.role === 'Key')
-            ).length;
+            row.hn = counts.HN.aux;
+            row.ph = counts.PH.aux;
+            row.ret = counts.Ret.aux;
+            row.key = counts.Key.aux;
         }
         if (cat === 'Avail Status') {
             // Contar solo agentes con estado 'Available' y LOB correspondiente

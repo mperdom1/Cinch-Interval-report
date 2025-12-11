@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
-import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, triggerAgentUpdateNotification, triggerRosterUpdateNotification, triggerStaffingUpdateNotification } from '../services/firebaseService';
+import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, saveAgentsToFirebase, triggerAgentUpdateNotification, triggerRosterUpdateNotification, triggerStaffingUpdateNotification } from '../services/firebaseService';
 
 interface Props {
     onDataUpdate: (agents: Agent[]) => void;
@@ -101,6 +101,12 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 alert('⚠️ No valid agents found in the report.\n\nPlease check your data format.');
                 return;
             }
+
+            // Guardar agentes en Firebase antes de notificar y actualizar
+            await saveAgentsToFirebase(agents);
+
+            // Guardar agentes en Firebase antes de notificar y actualizar
+            await saveAgentsToFirebase(agents);
 
             // Trigger notification for all users
             await triggerAgentUpdateNotification(agents, userEmail);

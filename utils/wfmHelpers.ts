@@ -333,12 +333,12 @@ export const calculateIntervalStats = (
         if (cat === 'Total Active') {
             row.hn = counts.HN.total; row.ph = counts.PH.total; row.ret = counts.Ret.total; row.key = counts.Key.total;
         }
-        // Total Offlines = suma de todos los estados Off Queue (AUX)
+        // Total Offlines = suma exacta de los estados específicos
         if (cat === 'Total Offlines') {
-            row.hn = counts.HN.aux;
-            row.ph = counts.PH.aux;
-            row.ret = counts.Ret.aux;
-            row.key = counts.Key.aux;
+            row.hn = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
+            row.ph = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
+            row.ret = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
+            row.key = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
         }
         if (cat === 'Avail Status') {
             // Contar solo agentes con estado 'Available' y LOB correspondiente
@@ -348,14 +348,14 @@ export const calculateIntervalStats = (
             row.key = agents.filter(a => a.state === 'Available' && (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key')))).length;
         }
         if (cat === 'AUX') {
-            // AUX = Total Offlines + Break + Meal (usando los valores ya calculados en las filas)
+            // AUX = Break + Meal + Total Offlines (cada uno ya calculado por su propia lógica)
             const totalOfflinesRow = stats.find(r => r.label === 'Total Offlines');
             const breakRow = stats.find(r => r.label === 'Break');
             const mealRow = stats.find(r => r.label === 'Meal');
-            row.hn = (totalOfflinesRow?.hn || 0) + (breakRow?.hn || 0) + (mealRow?.hn || 0);
-            row.ph = (totalOfflinesRow?.ph || 0) + (breakRow?.ph || 0) + (mealRow?.ph || 0);
-            row.ret = (totalOfflinesRow?.ret || 0) + (breakRow?.ret || 0) + (mealRow?.ret || 0);
-            row.key = (totalOfflinesRow?.key || 0) + (breakRow?.key || 0) + (mealRow?.key || 0);
+            row.hn = (breakRow?.hn || 0) + (mealRow?.hn || 0) + (totalOfflinesRow?.hn || 0);
+            row.ph = (breakRow?.ph || 0) + (mealRow?.ph || 0) + (totalOfflinesRow?.ph || 0);
+            row.ret = (breakRow?.ret || 0) + (mealRow?.ret || 0) + (totalOfflinesRow?.ret || 0);
+            row.key = (breakRow?.key || 0) + (mealRow?.key || 0) + (totalOfflinesRow?.key || 0);
         }
         if (cat === 'Break') {
             row.hn = counts.HN.break; row.ph = counts.PH.break; row.ret = counts.Ret.break; row.key = counts.Key.break;

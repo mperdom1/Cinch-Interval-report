@@ -495,7 +495,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
           .then((registration) => {
             // Obtiene el token FCM
             getToken(messaging, {
-              vapidKey: 'BC3Bh8fU10ebiJxl5de3fk-uzIQaxbzvdCg_4T9tHOL_MXLZ5NQPYwCWAPzvL1l2b3zJLMAiycvELhqIB0MGuIU',
+              vapidKey: '0uJO-07kPlNU5ja9Xj0SdfG2AMI4kjLMknlw9quZEII',
               serviceWorkerRegistration: registration
             })
               .then((currentToken) => {

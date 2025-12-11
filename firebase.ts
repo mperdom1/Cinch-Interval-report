@@ -9,12 +9,12 @@ import { getMessaging } from 'firebase/messaging';
 const firebaseConfig = {
   apiKey: "AIzaSyDEc7yDOP9Hhi86_IxSDSf-b3cGwbvPp8k",
   authDomain: "cinchintervalstaffingrep.firebaseapp.com",
+  databaseURL: "https://cinchintervalstaffingrep-default-rtdb.firebaseio.com",
   projectId: "cinchintervalstaffingrep",
-  storageBucket: "cinchintervalstaffingrep.firebasestorage.app",
+  storageBucket: "cinchintervalstaffingrep.appspot.com",
   messagingSenderId: "137246401526",
   appId: "1:137246401526:web:79aca486c44fee685fddd7",
-  measurementId: "G-MV14BQDEYQ",
-  databaseURL: "https://cinchintervalstaffingrep-default-rtdb.firebaseio.com"
+  measurementId: "G-MV14BQDEYQ"
 };
 
 // Initialize Firebase

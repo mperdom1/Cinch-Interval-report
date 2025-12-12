@@ -3,10 +3,11 @@ import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface FileDropZoneProps {
-    onFileContent: (content: string, fileName: string) => void;
+    onFileContent: (content: string | ArrayBuffer, fileName: string) => void;
     label?: string;
     acceptedFileTypes?: Record<string, string[]>;
     placeholder?: string;
+    readAsBinary?: boolean;
 }
 
 const FileDropZone: React.FC<FileDropZoneProps> = ({
@@ -14,11 +15,11 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({
     label = 'Drop file here',
     acceptedFileTypes = {
         'text/plain': ['.txt', '.csv', '.tsv'],
-        'application/vnd.ms-excel': ['.xls', '.xlsx'] // Note: raw browser file reader might mostly just read text unless we use excel parser lib
-        // For this improvement, let's assume text/csv/tsv content first, or add xlsx parser if needed.
-        // Reading binary xlsx in browser requires 'xlsx' library.
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+        'application/vnd.ms-excel': ['.xls']
     },
-    placeholder = 'Drag & drop a file here, or click to select'
+    placeholder = 'Drag & drop a file here, or click to select',
+    readAsBinary = false
 }) => {
     const [fileName, setFileName] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -34,16 +35,18 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({
         reader.onabort = () => setError('File reading was aborted');
         reader.onerror = () => setError('File reading has failed');
         reader.onload = () => {
-            const binaryStr = reader.result;
-            if (typeof binaryStr === 'string') {
-                onFileContent(binaryStr, file.name);
+            const result = reader.result;
+            if (result) {
+                onFileContent(result, file.name);
             }
         };
 
-        // Simple text read for now. If user wants Excel, we'd need xlsx lib.
-        // Assuming user exports to CSV or copy-pastes usually implies text data availability.
-        reader.readAsText(file);
-    }, [onFileContent]);
+        if (readAsBinary) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file);
+        }
+    }, [onFileContent, readAsBinary]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: acceptedFileTypes });
 

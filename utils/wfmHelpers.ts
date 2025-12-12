@@ -1,5 +1,6 @@
 import { Agent, IntervalRow } from '../types';
 import { STATE_MAPPING, MOCK_INTERVAL_DATA } from '../constants';
+import * as XLSX from 'xlsx';
 
 // --- Helper to split Excel data more reliably ---
 const splitExcelLine = (line: string): string[] => {
@@ -63,6 +64,30 @@ const getAgentRoleFallback = (team: string, skill: string): 'HN' | 'PH' | 'Ret' 
 };
 
 // --- Parsers ---
+
+/**
+ * Reads a workbook (Excel or CSV) from an ArrayBuffer or binary string
+ * and converts it to a tab-separated string for compatible parsing.
+ */
+export const readWorkbookData = (data: ArrayBuffer | string): string => {
+    try {
+        const workbook = XLSX.read(data, { type: typeof data === 'string' ? 'string' : 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Convert sheet to TSV (Tab Separated Values) which our existing parsers understand well
+        // We use header: 1 to get array of arrays, then join
+        const convertToTSV = (sheet: XLSX.WorkSheet) => {
+            const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+            return json.map(row => row.join('\t')).join('\n');
+        };
+
+        return convertToTSV(worksheet);
+    } catch (error) {
+        console.error('Error reading workbook:', error);
+        throw new Error('Failed to parse file. Please ensure it is a valid Excel or CSV file.');
+    }
+};
 
 /**
  * Parses roster data from a tab-separated format.

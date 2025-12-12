@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FileDropZone from './FileDropZone';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
 import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
@@ -20,7 +21,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
     const [processedCount, setProcessedCount] = useState<number | null>(null);
     const [isEditingRoster, setIsEditingRoster] = useState(false);
     const [isEditingStaffing, setIsEditingStaffing] = useState(false);
-    
+
     // Individual staffing boxes
     const [hnReqText, setHnReqText] = useState('');
     const [hnComText, setHnComText] = useState('');
@@ -41,7 +42,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
 
             const rosterMap = parseRosterData(rosterText);
             const count = Object.keys(rosterMap).length;
-            
+
             if (count === 0) {
                 alert("❌ Could not find any valid agent rows with 'LOB' information.\n\nPlease ensure you are pasting the correct columns (including CX Name and LOB).\n\nCheck that your data includes roles like 'CSR HN', 'CSR PH', 'Retention', or 'Key Client Support'.");
                 return;
@@ -58,7 +59,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 skill: '',
                 role: role
             }));
-            
+
             await saveRosterToFirebase(rosterArray);
             await triggerRosterUpdateNotification(rosterArray, userEmail);
 
@@ -83,20 +84,20 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
             let mapToUse = currentRoster;
 
             if (rosterText.trim()) {
-                 // If user entered roster text but didn't hit "Update Roster Logic", let's be nice and use it/save it
-                 try {
-                     const tempMap = parseRosterData(rosterText);
-                     if (Object.keys(tempMap).length > 0) {
-                         mapToUse = tempMap;
-                         onRosterUpdate(tempMap);
-                     }
-                 } catch (error) {
-                     console.warn('Could not parse inline roster data, using existing roster:', error);
-                 }
+                // If user entered roster text but didn't hit "Update Roster Logic", let's be nice and use it/save it
+                try {
+                    const tempMap = parseRosterData(rosterText);
+                    if (Object.keys(tempMap).length > 0) {
+                        mapToUse = tempMap;
+                        onRosterUpdate(tempMap);
+                    }
+                } catch (error) {
+                    console.warn('Could not parse inline roster data, using existing roster:', error);
+                }
             }
-            
+
             const agents = parseAgentData(reportText, mapToUse);
-            
+
             if (agents.length === 0) {
                 alert('⚠️ No valid agents found in the report.\n\nPlease check your data format.');
                 return;
@@ -123,25 +124,25 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
     const parseStaffingBox = (text: string): Record<string, number> => {
         const result: Record<string, number> = {};
         if (!text.trim()) return result;
-        
+
         const lines = text.trim().split('\n');
-        
+
         // Find today's date column
         const today = new Date();
         const estDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
         const todayDate = estDate.getDate();
         const todayMonth = estDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short' });
-        
+
         let dayColumnIndex = -1;
         let headerLine: string[] = [];
-        
+
         for (const line of lines) {
             const cols = line.split('\t').map(c => c.trim());
-            
+
             // Find header with dates
             if (line.toLowerCase().includes('interval') && cols.length > 1) {
                 headerLine = cols;
-                
+
                 for (let i = 1; i < headerLine.length; i++) {
                     const col = headerLine[i].trim();
                     const match = col.match(/(\d{1,2})[-\s]?(\w{3})/i);
@@ -154,11 +155,11 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                         }
                     }
                 }
-                
+
                 if (dayColumnIndex === -1) dayColumnIndex = 1; // Fallback
                 continue;
             }
-            
+
             // Parse data rows
             if (cols[0] && cols[0].includes(':')) {
                 const interval = cols[0];
@@ -168,7 +169,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                 }
             }
         }
-        
+
         return result;
     };
 
@@ -176,10 +177,10 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
         try {
             // Check if using box-by-box or single paste
             const usingBoxes = hnReqText || hnComText || phReqText || phComText || retReqText || retComText || keyReqText || keyComText;
-            
+
             let requirements: StaffingRequirements;
             let commitments: StaffingCommitments;
-            
+
             if (usingBoxes) {
                 // Parse each box individually
                 requirements = {
@@ -188,7 +189,7 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                     ret: parseStaffingBox(retReqText),
                     key: parseStaffingBox(keyReqText)
                 };
-                
+
                 commitments = {
                     hn: parseStaffingBox(hnComText),
                     ph: parseStaffingBox(phComText),
@@ -201,16 +202,16 @@ const HeadcountImporter: React.FC<Props> = ({ onDataUpdate, onRosterUpdate, onSt
                     alert('⚠️ Please paste staffing data.');
                     return;
                 }
-                
+
                 requirements = parseStaffingRequirements(staffingText);
                 commitments = parseStaffingCommitments(staffingText);
             }
-            
-            const reqCount = Object.keys(requirements.hn).length + Object.keys(requirements.ph).length + 
-                           Object.keys(requirements.ret).length + Object.keys(requirements.key).length;
-            const comCount = Object.keys(commitments.hn).length + Object.keys(commitments.ph).length + 
-                           Object.keys(commitments.ret).length + Object.keys(commitments.key).length;
-            
+
+            const reqCount = Object.keys(requirements.hn).length + Object.keys(requirements.ph).length +
+                Object.keys(requirements.ret).length + Object.keys(requirements.key).length;
+            const comCount = Object.keys(commitments.hn).length + Object.keys(commitments.ph).length +
+                Object.keys(commitments.ret).length + Object.keys(commitments.key).length;
+
             // Show detailed breakdown
             const summary = `
 Requirements Found:
@@ -231,9 +232,9 @@ Sample Requirements:
 - Retention 8:00 AM: ${requirements.ret['8:00 AM'] || 'NOT FOUND'}
 - Key 8:00 AM: ${requirements.key['8:00 AM'] || 'NOT FOUND'}
             `.trim();
-            
+
             console.log('📊 STAFFING DATA SUMMARY:\n' + summary);
-            
+
             if (reqCount === 0 && comCount === 0) {
                 alert('❌ Could not find any valid staffing data.\\n\\nPlease ensure you are pasting the correct format with:\\n- "HN CS Requirement" / "HN CS Commitment"\\n- "PH CS Requirement" / "PH CS Commitment"\\n- "Retention Requirement" / "Retention Commitment"\\n- "Key Client Support Requirement" / "Key Client Support Commitment"\\n\\nCheck browser console (F12) for more details.');
                 return;
@@ -246,7 +247,7 @@ Sample Requirements:
 
             onStaffingUpdate(requirements, commitments);
             setIsEditingStaffing(false);
-            
+
             // Clear all inputs
             setStaffingText('');
             setHnReqText('');
@@ -257,7 +258,7 @@ Sample Requirements:
             setRetComText('');
             setKeyReqText('');
             setKeyComText('');
-            
+
             alert(`✅ Staffing data updated successfully!\\n\\n${summary}`);
         } catch (error) {
             console.error('Error processing staffing:', error);
@@ -271,12 +272,12 @@ Sample Requirements:
     const needsStaffingUpdate = () => {
         const savedDate = localStorage.getItem('wfm_staffing_requirements_date');
         if (!savedDate) return true;
-        
+
         const now = new Date();
         const currentDay = now.getDay();
         const savedTimestamp = new Date(savedDate);
         const daysDiff = Math.floor((now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         // If it's Monday and data is older than 7 days
         return currentDay === 1 && daysDiff >= 7;
     };
@@ -289,7 +290,7 @@ Sample Requirements:
 
     return (
         <div className="space-y-6">
-            
+
             {/* Step 1: Headcount / Roster */}
             <div className="bg-white p-4 rounded-lg shadow border-2 border-indigo-100">
                 <div className="flex justify-between items-start mb-2">
@@ -299,11 +300,11 @@ Sample Requirements:
                             Headcount / Roster Setup (Monthly)
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                           Setup the Master Roster. Only needed <strong>once a month</strong> or when staff changes.
+                            Setup the Master Roster. Only needed <strong>once a month</strong> or when staff changes.
                         </p>
                     </div>
                 </div>
-                
+
                 {lastUpdated && !isEditingRoster ? (
                     <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between animate-[fadeIn_0.5s]">
                         <div className="flex items-start gap-3">
@@ -320,7 +321,7 @@ Sample Requirements:
                                 </p>
                             </div>
                         </div>
-                        <button 
+                        <button
                             onClick={() => setIsEditingRoster(true)}
                             className="bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded text-xs font-bold hover:bg-indigo-50 hover:text-indigo-800 transition-colors shadow-sm"
                         >
@@ -329,7 +330,7 @@ Sample Requirements:
                     </div>
                 ) : (
                     <div className={`transition-all ${isEditingRoster ? 'animate-[fadeIn_0.2s]' : ''}`}>
-                         <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-gray-500 mb-2">
                             Paste your spreadsheet with columns: <strong>CX Name, LOB</strong> (and optionally Full Name).
                         </p>
                         <textarea
@@ -339,16 +340,22 @@ Sample Requirements:
                             onChange={(e) => setRosterText(e.target.value)}
                             aria-label="Master roster data input"
                         />
+                        <div className="mb-3">
+                            <FileDropZone
+                                label="Or upload Roster File"
+                                onFileContent={(content) => setRosterText(content)}
+                            />
+                        </div>
                         <div className="flex justify-end gap-2">
-                             {lastUpdated && (
-                                <button 
+                            {lastUpdated && (
+                                <button
                                     onClick={() => setIsEditingRoster(false)}
                                     className="text-gray-500 hover:text-gray-700 text-xs font-medium px-3 py-1.5"
                                 >
                                     Cancel
                                 </button>
-                             )}
-                            <button 
+                            )}
+                            <button
                                 onClick={handleRosterProcess}
                                 className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
                             >
@@ -368,7 +375,7 @@ Sample Requirements:
                             Staffing Requirements & Commitments (Weekly)
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                           Import staffing forecast data. Update <strong>weekly</strong> or when schedules change.
+                            Import staffing forecast data. Update <strong>weekly</strong> or when schedules change.
                         </p>
                     </div>
                 </div>
@@ -389,7 +396,7 @@ Sample Requirements:
                         </div>
                     </div>
                 )}
-                
+
                 {!isEditingStaffing ? (
                     <div className={`${needsStaffingUpdate() ? 'bg-orange-50 border-orange-300' : hasStaffingData() ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-4 flex items-center justify-between`}>
                         <div className="flex items-start gap-3">
@@ -405,8 +412,8 @@ Sample Requirements:
                                     {hasStaffingData() && !needsStaffingUpdate() ? 'Staffing Data Active' : 'Staffing Data'}
                                 </h4>
                                 <p className={`text-xs mt-1 ${needsStaffingUpdate() ? 'text-orange-700' : hasStaffingData() ? 'text-green-700' : 'text-purple-700'}`}>
-                                    {hasStaffingData() && !needsStaffingUpdate() 
-                                        ? 'Valid for this week' 
+                                    {hasStaffingData() && !needsStaffingUpdate()
+                                        ? 'Valid for this week'
                                         : 'Click to import or update requirements and commitments'}
                                 </p>
                                 {hasStaffingData() && !needsStaffingUpdate() && (
@@ -416,23 +423,22 @@ Sample Requirements:
                                 )}
                             </div>
                         </div>
-                        <button 
+                        <button
                             onClick={() => setIsEditingStaffing(true)}
-                            className={`bg-white border px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm ${
-                                needsStaffingUpdate() 
-                                    ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                            className={`bg-white border px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm ${needsStaffingUpdate()
+                                    ? 'border-orange-300 text-orange-600 hover:bg-orange-50'
                                     : 'border-purple-200 text-purple-600 hover:bg-purple-50'
-                            }`}
+                                }`}
                         >
                             {needsStaffingUpdate() ? '⚠️ Update Now' : 'Import Staffing Data'}
                         </button>
                     </div>
                 ) : (
                     <div className="animate-[fadeIn_0.2s]">
-                         <p className="text-xs text-gray-500 mb-3">
+                        <p className="text-xs text-gray-500 mb-3">
                             Paste each staffing table separately below. Copy from Excel/Sheets box by box.
                         </p>
-                        
+
                         {/* Box-by-Box Input Grid */}
                         <div className="grid grid-cols-2 gap-3 mb-3">
                             {/* HN CS */}
@@ -454,7 +460,7 @@ Sample Requirements:
                                     onChange={(e) => setHnComText(e.target.value)}
                                 />
                             </div>
-                            
+
                             {/* PH CS */}
                             <div>
                                 <label className="text-xs font-bold text-blue-700 mb-1 block">PH CS Requirement</label>
@@ -474,7 +480,7 @@ Sample Requirements:
                                     onChange={(e) => setPhComText(e.target.value)}
                                 />
                             </div>
-                            
+
                             {/* Retention */}
                             <div>
                                 <label className="text-xs font-bold text-blue-700 mb-1 block">Retention Requirement</label>
@@ -494,7 +500,7 @@ Sample Requirements:
                                     onChange={(e) => setRetComText(e.target.value)}
                                 />
                             </div>
-                            
+
                             {/* Key Client Support */}
                             <div>
                                 <label className="text-xs font-bold text-blue-700 mb-1 block">Key Client Support Requirement</label>
@@ -515,15 +521,15 @@ Sample Requirements:
                                 />
                             </div>
                         </div>
-                        
+
                         <div className="flex justify-end gap-2">
-                            <button 
+                            <button
                                 onClick={() => setIsEditingStaffing(false)}
                                 className="text-gray-500 hover:text-gray-700 text-xs font-medium px-3 py-1.5"
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 onClick={handleStaffingProcess}
                                 className="bg-purple-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-purple-700 transition-colors shadow-sm"
                             >
@@ -550,13 +556,21 @@ Sample Requirements:
                     onChange={(e) => setReportText(e.target.value)}
                     aria-label="Real-time agent report data input"
                 />
+
+                <div className="mb-4">
+                    <FileDropZone
+                        label="Upload Agent Report File"
+                        placeholder="Drag & Drop the daily agent report here"
+                        onFileContent={(content) => setReportText(content)}
+                    />
+                </div>
                 <div className="flex justify-between items-center">
                     <div className="text-sm">
                         {processedCount !== null && (
                             <span className="text-green-600 font-medium">Successfully processed {processedCount} agents using {rosterCount > 0 ? 'Monthly Roster' : 'fallback logic'}.</span>
                         )}
                     </div>
-                    <button 
+                    <button
                         onClick={handleReportProcess}
                         className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-bold hover:bg-blue-700 transition-colors shadow-md"
                     >

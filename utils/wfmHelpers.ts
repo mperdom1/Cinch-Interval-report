@@ -41,7 +41,7 @@ const getRoleFromContext = (...contexts: string[]): 'HN' | 'PH' | 'Ret' | 'Key' 
     for (const str of contexts) {
         if (!str) continue;
         const s = str.toLowerCase();
-        
+
         // Priority Keywords matching the specific user file (LOB column)
         if (s.includes('key client') || s.includes('key support')) return 'Key';
         if (s.includes('retention')) return 'Ret';
@@ -96,7 +96,7 @@ export const parseRosterData = (rawData: string): Record<string, 'HN' | 'PH' | '
         fullNameIdx = header.findIndex(h => h.includes('full name'));
         lobIdx = header.findIndex(h => h.includes('lob') || h.includes('line of business'));
         cxoneIdIdx = header.findIndex(h => h.includes('cxone id') || h.includes('cx id'));
-        
+
         if (lobIdx !== -1) {
             headerFound = true;
         }
@@ -125,14 +125,14 @@ export const parseRosterData = (rawData: string): Record<string, 'HN' | 'PH' | '
         const line = lines[i];
         if (!line.trim()) continue;
         const cols = splitExcelLine(line).map(c => c.trim());
-        
+
         let name = '';
         let roleStr = '';
 
         if (lobIdx !== -1 && cols[lobIdx]) {
             // We have identified columns
             roleStr = cols[lobIdx];
-            
+
             // Prefer CX Name (Last, First), then Full Name, then Col 0
             if (cxNameIdx !== -1 && cols[cxNameIdx]) name = cols[cxNameIdx];
             else if (fullNameIdx !== -1 && cols[fullNameIdx]) name = cols[fullNameIdx];
@@ -150,10 +150,10 @@ export const parseRosterData = (rawData: string): Record<string, 'HN' | 'PH' | '
             // If scanning, assume name is first non-numeric long column
             if (!name) {
                 for (let j = 0; j < Math.min(cols.length, 3); j++) {
-                     if (cols[j].length > 3 && !/^\d+$/.test(cols[j])) {
-                         name = cols[j];
-                         break;
-                     }
+                    if (cols[j].length > 3 && !/^\d+$/.test(cols[j])) {
+                        name = cols[j];
+                        break;
+                    }
                 }
             }
         }
@@ -174,7 +174,7 @@ export const parseRosterData = (rawData: string): Record<string, 'HN' | 'PH' | '
                         continue;
                     }
                 }
-                
+
                 // Fallback: Use name-based key
                 if (name) {
                     const key = generateNameKey(name);
@@ -260,7 +260,7 @@ export const parseAgentData = (rawData: string, roster: Record<string, 'HN' | 'P
  * @returns Array of interval rows with calculated statistics
  */
 export const calculateIntervalStats = (
-    agents: Agent[], 
+    agents: Agent[],
     required = { hn: 0, ph: 0, ret: 0, key: 0 },
     committed = { hn: 0, ph: 0, ret: 0, key: 0 }
 ): IntervalRow[] => {
@@ -274,19 +274,19 @@ export const calculateIntervalStats = (
 
     // Initialize counts
     const counts = {
-        HN: { 
+        HN: {
             total: 0, avail: 0, aux: 0, break: 0, meal: 0, meeting: 0, coaching: 0, training: 0, acw: 0,
             offPhone: 0, unscheduledBreak: 0, systemIssue: 0, mentoring: 0, acwOutbound: 0
         },
-        PH: { 
+        PH: {
             total: 0, avail: 0, aux: 0, break: 0, meal: 0, meeting: 0, coaching: 0, training: 0, acw: 0,
             offPhone: 0, unscheduledBreak: 0, systemIssue: 0, mentoring: 0, acwOutbound: 0
         },
-        Ret: { 
+        Ret: {
             total: 0, avail: 0, aux: 0, break: 0, meal: 0, meeting: 0, coaching: 0, training: 0, acw: 0,
             offPhone: 0, unscheduledBreak: 0, systemIssue: 0, mentoring: 0, acwOutbound: 0
         },
-        Key: { 
+        Key: {
             total: 0, avail: 0, aux: 0, break: 0, meal: 0, meeting: 0, coaching: 0, training: 0, acw: 0,
             offPhone: 0, unscheduledBreak: 0, systemIssue: 0, mentoring: 0, acwOutbound: 0
         }
@@ -295,7 +295,7 @@ export const calculateIntervalStats = (
     agents.forEach(agent => {
         const role = agent.role as keyof typeof counts;
         const mapping = STATE_MAPPING[agent.state];
-        
+
         // Safety check if role is somehow invalid
         if (!counts[role]) return;
 
@@ -304,7 +304,7 @@ export const calculateIntervalStats = (
 
         if (!mapping) {
             // Default bucket if unknown state
-            counts[role].aux++; 
+            counts[role].aux++;
             return;
         }
 
@@ -329,33 +329,33 @@ export const calculateIntervalStats = (
     // Update the rows in the stats array by matching the label
     stats.forEach((row: any) => {
         const cat = row.label;
-        
+
         if (cat === 'Total Active') {
             row.hn = counts.HN.total; row.ph = counts.PH.total; row.ret = counts.Ret.total; row.key = counts.Key.total;
         }
         // Total Offlines = suma exacta de los estados específicos
         if (cat === 'Total Offlines') {
-            row.hn = counts.HN.acwOutbound + counts.HN.training + counts.HN.meeting + counts.HN.coaching + counts.HN.offPhone + counts.HN.unscheduledBreak + counts.HN.systemIssue + counts.HN.mentoring;
-            row.ph = counts.PH.acwOutbound + counts.PH.training + counts.PH.meeting + counts.PH.coaching + counts.PH.offPhone + counts.PH.unscheduledBreak + counts.PH.systemIssue + counts.PH.mentoring;
-            row.ret = counts.Ret.acwOutbound + counts.Ret.training + counts.Ret.meeting + counts.Ret.coaching + counts.Ret.offPhone + counts.Ret.unscheduledBreak + counts.Ret.systemIssue + counts.Ret.mentoring;
-            row.key = counts.Key.acwOutbound + counts.Key.training + counts.Key.meeting + counts.Key.coaching + counts.Key.offPhone + counts.Key.unscheduledBreak + counts.Key.systemIssue + counts.Key.mentoring;
+            // Total Offlines = AUX - (Break + Meal)
+            // This ensures all mapped 'Off Queue' states (including ACW, etc.) are captured in Total Offlines
+            // even if they don't have a specific sub-category row.
+            row.hn = Math.max(0, counts.HN.aux - counts.HN.break - counts.HN.meal);
+            row.ph = Math.max(0, counts.PH.aux - counts.PH.break - counts.PH.meal);
+            row.ret = Math.max(0, counts.Ret.aux - counts.Ret.break - counts.Ret.meal);
+            row.key = Math.max(0, counts.Key.aux - counts.Key.break - counts.Key.meal);
         }
         if (cat === 'Avail Status') {
             // Contar solo agentes con estado 'Available' y LOB correspondiente
-            row.hn = agents.filter(a => a.state === 'Available' && (a.role === 'HN' || (a.lob && a.lob.toLowerCase().includes('hn')))).length;
-            row.ph = agents.filter(a => a.state === 'Available' && (a.role === 'PH' || (a.lob && a.lob.toLowerCase().includes('ph')))).length;
-            row.ret = agents.filter(a => a.state === 'Available' && (a.role === 'Ret' || (a.lob && a.lob.toLowerCase().includes('ret')))).length;
-            row.key = agents.filter(a => a.state === 'Available' && (a.role === 'Key' || (a.lob && a.lob.toLowerCase().includes('key')))).length;
+            row.hn = agents.filter(a => a.state === 'Available' && a.role === 'HN').length;
+            row.ph = agents.filter(a => a.state === 'Available' && a.role === 'PH').length;
+            row.ret = agents.filter(a => a.state === 'Available' && a.role === 'Ret').length;
+            row.key = agents.filter(a => a.state === 'Available' && a.role === 'Key').length;
         }
         if (cat === 'AUX') {
-            // AUX = Break + Meal + Total Offlines (cada uno ya calculado por su propia lógica)
-            const totalOfflinesRow = stats.find(r => r.label === 'Total Offlines');
-            const breakRow = stats.find(r => r.label === 'Break');
-            const mealRow = stats.find(r => r.label === 'Meal');
-            row.hn = (breakRow?.hn || 0) + (mealRow?.hn || 0) + (totalOfflinesRow?.hn || 0);
-            row.ph = (breakRow?.ph || 0) + (mealRow?.ph || 0) + (totalOfflinesRow?.ph || 0);
-            row.ret = (breakRow?.ret || 0) + (mealRow?.ret || 0) + (totalOfflinesRow?.ret || 0);
-            row.key = (breakRow?.key || 0) + (mealRow?.key || 0) + (totalOfflinesRow?.key || 0);
+            // AUX = Total Off Queue
+            row.hn = counts.HN.aux;
+            row.ph = counts.PH.aux;
+            row.ret = counts.Ret.aux;
+            row.key = counts.Key.aux;
         }
         if (cat === 'Break') {
             row.hn = counts.HN.break; row.ph = counts.PH.break; row.ret = counts.Ret.break; row.key = counts.Key.break;
@@ -370,13 +370,13 @@ export const calculateIntervalStats = (
             row.hn = counts.HN.training; row.ph = counts.PH.training; row.ret = counts.Ret.training; row.key = counts.Key.training;
         }
         // "Actual" ahora es Total Active - Total Offlines
+        // "Actual" ahora es Total Active - Total Offlines
         if (cat === 'Actual') {
-              // Actual = Total Active - AUX
-              const auxRow = stats.find(r => r.label === 'AUX');
-              row.hn = counts.HN.total - (auxRow?.hn || 0);
-              row.ph = counts.PH.total - (auxRow?.ph || 0);
-              row.ret = counts.Ret.total - (auxRow?.ret || 0);
-              row.key = counts.Key.total - (auxRow?.key || 0);
+            // Actual = Total Active - AUX
+            row.hn = counts.HN.total - counts.HN.aux;
+            row.ph = counts.PH.total - counts.PH.aux;
+            row.ret = counts.Ret.total - counts.Ret.aux;
+            row.key = counts.Key.total - counts.Key.aux;
         }
         // HC Required - from staffing data
         if (cat === 'HC Required') {
@@ -407,41 +407,41 @@ export const calculateIntervalStats = (
             row.ret = committed.ret > 0 ? Math.round((actual.ret / committed.ret) * 100) + '%' : (actual.ret > 0 ? '100%' : '0%');
             row.key = committed.key > 0 ? Math.round((actual.key / committed.key) * 100) + '%' : (actual.key > 0 ? '100%' : '0%');
         }
-        
+
         // FTE Calculations
         // Formula from Excel: =IF(K7>K8, K7-(K8*98%), (K8*98%)-K7)
         // K7 = Actual (Total Active - Break), K8 = HC Required
         if (cat === 'FTE before 98%') {
             const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
             const target98 = { hn: required.hn * 0.98, ph: required.ph * 0.98, ret: required.ret * 0.98, key: required.key * 0.98 };
-            
+
             row.hn = required.hn > 0 ? Math.round(Math.abs(actual.hn - target98.hn)) : 0;
             row.ph = required.ph > 0 ? Math.round(Math.abs(actual.ph - target98.ph)) : 0;
             row.ret = required.ret > 0 ? Math.round(Math.abs(actual.ret - target98.ret)) : 0;
             row.key = required.key > 0 ? Math.round(Math.abs(actual.key - target98.key)) : 0;
         }
-        
+
         // +/- FTE before 100%: Difference between Actual and Required
         if (cat === '+/- FTE before 100%') {
             const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
-            
+
             row.hn = required.hn > 0 ? actual.hn - required.hn : 0;
             row.ph = required.ph > 0 ? actual.ph - required.ph : 0;
             row.ret = required.ret > 0 ? actual.ret - required.ret : 0;
             row.key = required.key > 0 ? actual.key - required.key : 0;
         }
-        
+
         // +/- FTE before 110%: Difference between Actual and 110% of Required
         if (cat === '+/- FTE before 110%') {
             const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
             const target110 = { hn: required.hn * 1.10, ph: required.ph * 1.10, ret: required.ret * 1.10, key: required.key * 1.10 };
-            
+
             row.hn = required.hn > 0 ? Math.round(actual.hn - target110.hn) : 0;
             row.ph = required.ph > 0 ? Math.round(actual.ph - target110.ph) : 0;
             row.ret = required.ret > 0 ? Math.round(actual.ret - target110.ret) : 0;
             row.key = required.key > 0 ? Math.round(actual.key - target110.key) : 0;
         }
-        
+
         // Specific state counts
         if (cat === 'ACW_Outbound') {
             row.hn = counts.HN.acwOutbound;
@@ -474,12 +474,7 @@ export const calculateIntervalStats = (
             row.key = counts.Key.mentoring;
         }
         // Total Offlines = sum of all offline states (no Total Active)
-        if (cat === 'Total Offlines') {
-            row.hn = counts.HN.aux;
-            row.ph = counts.PH.aux;
-            row.ret = counts.Ret.aux;
-            row.key = counts.Key.aux;
-        }
+
     });
 
     return stats;

@@ -1,7 +1,7 @@
 // Mapping logic from the user's images
 export const STATE_MAPPING: Record<string, { code: string; type: 'On Queue' | 'Off Queue' | 'System'; color: string }> = {
   'InboundContact': { code: 'Inbound', type: 'On Queue', color: 'bg-green-100' },
-  'ACW': { code: 'ACW', type: 'Off Queue', color: 'bg-yellow-100' },
+  'ACW': { code: 'ACW', type: 'On Queue', color: 'bg-green-100' },
   'OutboundContact': { code: 'Outbound', type: 'On Queue', color: 'bg-green-100' },
   'SCHD_Offline_Ldr_Approved': { code: 'Off Phone', type: 'Off Queue', color: 'bg-yellow-100' },
   'UNSCHD_System_Issues': { code: 'System Issue', type: 'Off Queue', color: 'bg-yellow-100' },
@@ -61,6 +61,6 @@ export const MOCK_INTERVAL_DATA = [
 ];
 
 export const STAFFING_GRID_DATA = {
-    intervals: ["8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM"],
-    dates: ["1-Dec", "2-Dec", "3-Dec", "4-Dec", "5-Dec", "6-Dec", "7-Dec"]
+  intervals: ["8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM"],
+  dates: ["1-Dec", "2-Dec", "3-Dec", "4-Dec", "5-Dec", "6-Dec", "7-Dec"]
 }

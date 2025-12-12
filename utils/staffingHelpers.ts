@@ -1,7 +1,7 @@
 import { StaffingRequirements, StaffingCommitments } from '../types';
 
 // --- Helper to split Excel data more reliably ---
-const splitExcelLine = (line: string): string[] => {
+export const splitExcelLine = (line: string): string[] => {
     // Try tab first (most common from Excel)
     if (line.includes('\t')) {
         return line.split('\t');
@@ -51,7 +51,7 @@ export const parseStaffingRequirements = (rawData: string): StaffingRequirements
 
     for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // Detect role section headers
         if (trimmedLine.toLowerCase().includes('hn cs requirement')) {
             currentRole = 'hn';
@@ -78,7 +78,7 @@ export const parseStaffingRequirements = (rawData: string): StaffingRequirements
         if (!currentRole) continue;
 
         const cols = splitExcelLine(line).map(c => c.trim());
-        
+
         // Detect header row with dates (Interval | 1-Dec | 2-Dec ...)
         if (trimmedLine.toLowerCase().includes('interval') && cols.length > 1) {
             headerLine = cols;
@@ -87,10 +87,10 @@ export const parseStaffingRequirements = (rawData: string): StaffingRequirements
             const estDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
             const todayDate = estDate.getDate(); // 1-31
             const todayMonth = estDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short' }); // "Dec"
-            
+
             console.log(`🔍 [Requirements] Looking for date column: ${todayDate}-${todayMonth}`);
             console.log('📋 [Requirements] Available columns:', headerLine);
-            
+
             // Look for column matching today's date (e.g., "6-Dec")
             for (let i = 1; i < headerLine.length; i++) {
                 const col = headerLine[i].trim();
@@ -106,7 +106,7 @@ export const parseStaffingRequirements = (rawData: string): StaffingRequirements
                     }
                 }
             }
-            
+
             if (dayColumnIndex === -1) {
                 console.warn('⚠️ [Requirements] No matching date column found, using fallback');
                 // Fallback: use first data column
@@ -119,15 +119,15 @@ export const parseStaffingRequirements = (rawData: string): StaffingRequirements
         if (!trimmedLine) continue;
 
         const interval = cols[0];
-        
+
         // Parse time interval (e.g., "8:00 AM", "9:30 PM")
         if (interval && interval.includes(':')) {
             // Use today's column if found, otherwise use first data column
             const columnToUse = dayColumnIndex !== -1 && dayColumnIndex < cols.length ? dayColumnIndex : 1;
             const value = parseInt(cols[columnToUse]);
-            
+
             console.log(`📝 [${currentRole}] Interval: "${interval}", Column: ${columnToUse}, Value: ${value}`);
-            
+
             if (!isNaN(value)) {
                 requirements[currentRole][interval] = value;
             }
@@ -161,7 +161,7 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
 
     for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // Detect role section headers
         if (trimmedLine.toLowerCase().includes('hn cs commitment')) {
             currentRole = 'hn';
@@ -184,7 +184,7 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
         if (!currentRole) continue;
 
         const cols = splitExcelLine(line).map(c => c.trim());
-        
+
         // Detect header row with dates
         if (trimmedLine.toLowerCase().includes('interval') && cols.length > 1) {
             headerLine = cols;
@@ -192,10 +192,10 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
             const estDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
             const todayDate = estDate.getDate();
             const todayMonth = estDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short' });
-            
+
             console.log(`🔍 [Commitments] Looking for date column: ${todayDate}-${todayMonth}`);
             console.log('📋 [Commitments] Available columns:', headerLine);
-            
+
             for (let i = 1; i < headerLine.length; i++) {
                 const col = headerLine[i].trim();
                 const match = col.match(/(\d{1,2})[-\s]?(\w{3})/i);
@@ -209,7 +209,7 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
                     }
                 }
             }
-            
+
             if (dayColumnIndex === -1) {
                 console.warn('⚠️ [Commitments] No matching date column found, using fallback');
                 dayColumnIndex = 1;
@@ -220,11 +220,11 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
         if (!trimmedLine) continue;
 
         const interval = cols[0];
-        
+
         if (interval && interval.includes(':')) {
             const columnToUse = dayColumnIndex !== -1 && dayColumnIndex < cols.length ? dayColumnIndex : 1;
             const value = parseInt(cols[columnToUse]);
-            
+
             if (!isNaN(value)) {
                 commitments[currentRole][interval] = value;
             }
@@ -241,21 +241,21 @@ export const parseStaffingCommitments = (rawData: string): StaffingCommitments =
  */
 export const getCurrentInterval = (): string => {
     const now = new Date();
-    
+
     // Get Time in America/New_York (EST/EDT)
-    const estTimeString = now.toLocaleTimeString('en-US', { 
-        timeZone: 'America/New_York', 
+    const estTimeString = now.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
         hour12: true,
         hour: 'numeric',
         minute: '2-digit'
     });
-    
+
     const [time, ampm] = estTimeString.split(' ');
     const [hour, minute] = time.split(':').map(Number);
-    
+
     // Round to nearest 30-minute interval
     const roundedMinute = minute >= 30 ? '30' : '00';
-    
+
     return `${hour}:${roundedMinute} ${ampm}`;
 };
 

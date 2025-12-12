@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import FileDropZone from './FileDropZone';
 import { Agent, StaffingRequirements, StaffingCommitments } from '../types';
-import { parseAgentData, parseRosterData } from '../utils/wfmHelpers';
+import {
+    parseAgentData,
+    parseRosterData,
+    readWorkbookData
+} from '../utils/wfmHelpers';
 import { parseStaffingRequirements, parseStaffingCommitments } from '../utils/staffingHelpers';
 import { saveRosterToFirebase, saveStaffingRequirementsToFirebase, saveStaffingCommitmentsToFirebase, saveAgentsToFirebase, triggerAgentUpdateNotification, triggerRosterUpdateNotification, triggerStaffingUpdateNotification } from '../services/firebaseService';
 
@@ -342,8 +346,17 @@ Sample Requirements:
                         />
                         <div className="mb-3">
                             <FileDropZone
-                                label="Or upload Roster File"
-                                onFileContent={(content) => setRosterText(content)}
+                                label="Or upload Roster File (Excel/CSV)"
+                                readAsBinary={true}
+                                onFileContent={(content) => {
+                                    try {
+                                        const text = typeof content === 'string' ? content : readWorkbookData(content);
+                                        setRosterText(text);
+                                        // Optional: we can try to parse immediately to validate, but maybe just setting text is safer for now
+                                    } catch (e: any) {
+                                        alert('Failed to read file: ' + e.message);
+                                    }
+                                }}
                             />
                         </div>
                         <div className="flex justify-end gap-2">
@@ -426,8 +439,8 @@ Sample Requirements:
                         <button
                             onClick={() => setIsEditingStaffing(true)}
                             className={`bg-white border px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm ${needsStaffingUpdate()
-                                    ? 'border-orange-300 text-orange-600 hover:bg-orange-50'
-                                    : 'border-purple-200 text-purple-600 hover:bg-purple-50'
+                                ? 'border-orange-300 text-orange-600 hover:bg-orange-50'
+                                : 'border-purple-200 text-purple-600 hover:bg-purple-50'
                                 }`}
                         >
                             {needsStaffingUpdate() ? '⚠️ Update Now' : 'Import Staffing Data'}
@@ -559,9 +572,17 @@ Sample Requirements:
 
                 <div className="mb-4">
                     <FileDropZone
-                        label="Upload Agent Report File"
+                        label="Upload Agent Report File (Excel/CSV)"
                         placeholder="Drag & Drop the daily agent report here"
-                        onFileContent={(content) => setReportText(content)}
+                        readAsBinary={true}
+                        onFileContent={(content) => {
+                            try {
+                                const text = typeof content === 'string' ? content : readWorkbookData(content);
+                                setReportText(text);
+                            } catch (e: any) {
+                                alert('Failed to read file: ' + e.message);
+                            }
+                        }}
                     />
                 </div>
                 <div className="flex justify-between items-center">

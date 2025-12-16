@@ -129,20 +129,35 @@ export const useFirebaseSync = (user: User | null, initialAgents: Agent[]): UseF
     };
 };
 
+import toast from 'react-hot-toast';
+
 // Helper for local notifications
 const notifyIfExternalUpdate = (updatedBy: string, currentUserEmail: string, title: string) => {
-    if (updatedBy !== currentUserEmail && 'Notification' in window && Notification.permission === 'granted') {
-        try {
-            const n = new Notification(title, {
-                body: `Updated by ${updatedBy}`,
-                icon: '/favicon.ico'
-            });
-            n.onclick = () => {
-                window.focus();
-                n.close();
-            };
-        } catch (e) {
-            console.error('Notification error', e);
+    if (updatedBy !== currentUserEmail) {
+        // In-App Toast
+        toast.success(`${title}\nUpdated by ${updatedBy}`, {
+            icon: '🔔',
+            style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+            },
+        });
+
+        // Browser Notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+                const n = new Notification(title, {
+                    body: `Updated by ${updatedBy}`,
+                    icon: '/favicon.ico'
+                });
+                n.onclick = () => {
+                    window.focus();
+                    n.close();
+                };
+            } catch (e) {
+                console.error('Notification error', e);
+            }
         }
     }
 };

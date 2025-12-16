@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Toaster } from 'react-hot-toast';
 import IntervalTable from './components/IntervalTable';
 import AgentAlerts from './components/AgentAlerts';
 import StateHelper from './components/StateHelper';
@@ -195,6 +196,7 @@ Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comR
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50/30 font-sans text-gray-900 pb-20">
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
             {/* Top Navigation */}
             <nav className="bg-gradient-to-r from-cinch-600 to-cinch-700 text-white shadow-xl sticky top-0 z-40 backdrop-blur-md bg-opacity-95 border-b border-white/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

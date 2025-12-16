@@ -419,18 +419,20 @@ export const calculateIntervalStats = (
         }
         // Calculate attainment percentages
         if (cat === 'Actual vs Required Attainment') {
-            const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
-            row.hn = required.hn > 0 ? Math.round((actual.hn / required.hn) * 100) + '%' : (actual.hn > 0 ? '100%' : '0%');
-            row.ph = required.ph > 0 ? Math.round((actual.ph / required.ph) * 100) + '%' : (actual.ph > 0 ? '100%' : '0%');
-            row.ret = required.ret > 0 ? Math.round((actual.ret / required.ret) * 100) + '%' : (actual.ret > 0 ? '100%' : '0%');
-            row.key = required.key > 0 ? Math.round((actual.key / required.key) * 100) + '%' : (actual.key > 0 ? '100%' : '0%');
+            // Use Actual row (Total Active - AUX)
+            const actual = { hn: counts.HN.total - counts.HN.aux, ph: counts.PH.total - counts.PH.aux, ret: counts.Ret.total - counts.Ret.aux, key: counts.Key.total - counts.Key.aux };
+            row.hn = required.hn > 0 ? Math.round((actual.hn / required.hn) * 100) + '%' : '';
+            row.ph = required.ph > 0 ? Math.round((actual.ph / required.ph) * 100) + '%' : '';
+            row.ret = required.ret > 0 ? Math.round((actual.ret / required.ret) * 100) + '%' : '';
+            row.key = required.key > 0 ? Math.round((actual.key / required.key) * 100) + '%' : '';
         }
         if (cat === 'Actual vs Committed Attainment') {
-            const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
-            row.hn = committed.hn > 0 ? Math.round((actual.hn / committed.hn) * 100) + '%' : (actual.hn > 0 ? '100%' : '0%');
-            row.ph = committed.ph > 0 ? Math.round((actual.ph / committed.ph) * 100) + '%' : (actual.ph > 0 ? '100%' : '0%');
-            row.ret = committed.ret > 0 ? Math.round((actual.ret / committed.ret) * 100) + '%' : (actual.ret > 0 ? '100%' : '0%');
-            row.key = committed.key > 0 ? Math.round((actual.key / committed.key) * 100) + '%' : (actual.key > 0 ? '100%' : '0%');
+            // Use Actual row (Total Active - AUX)
+            const actual = { hn: counts.HN.total - counts.HN.aux, ph: counts.PH.total - counts.PH.aux, ret: counts.Ret.total - counts.Ret.aux, key: counts.Key.total - counts.Key.aux };
+            row.hn = committed.hn > 0 ? Math.round((actual.hn / committed.hn) * 100) + '%' : '';
+            row.ph = committed.ph > 0 ? Math.round((actual.ph / committed.ph) * 100) + '%' : '';
+            row.ret = committed.ret > 0 ? Math.round((actual.ret / committed.ret) * 100) + '%' : '';
+            row.key = committed.key > 0 ? Math.round((actual.key / committed.key) * 100) + '%' : '';
         }
 
         // FTE Calculations
@@ -438,12 +440,20 @@ export const calculateIntervalStats = (
         // K7 = Actual (Total Active - Break), K8 = HC Required
         if (cat === 'FTE before 98%') {
             const actual = { hn: counts.HN.total - counts.HN.break, ph: counts.PH.total - counts.PH.break, ret: counts.Ret.total - counts.Ret.break, key: counts.Key.total - counts.Key.break };
-            const target98 = { hn: required.hn * 0.98, ph: required.ph * 0.98, ret: required.ret * 0.98, key: required.key * 0.98 };
 
-            row.hn = required.hn > 0 ? Math.round(Math.abs(actual.hn - target98.hn)) : 0;
-            row.ph = required.ph > 0 ? Math.round(Math.abs(actual.ph - target98.ph)) : 0;
-            row.ret = required.ret > 0 ? Math.round(Math.abs(actual.ret - target98.ret)) : 0;
-            row.key = required.key > 0 ? Math.round(Math.abs(actual.key - target98.key)) : 0;
+            const calculateFTE = (act: number, req: number) => {
+                const target98 = req * 0.98;
+                // Formula: =IF(ACTUAL>HCREQ, Actual-(HCREQ*98%), (HCREQ*98%)-Actual)
+                if (act > req) {
+                    return Math.round(act - target98);
+                }
+                return Math.round(target98 - act);
+            };
+
+            row.hn = required.hn > 0 ? calculateFTE(actual.hn, required.hn) : 0;
+            row.ph = required.ph > 0 ? calculateFTE(actual.ph, required.ph) : 0;
+            row.ret = required.ret > 0 ? calculateFTE(actual.ret, required.ret) : 0;
+            row.key = required.key > 0 ? calculateFTE(actual.key, required.key) : 0;
         }
 
         // +/- FTE before 100%: Difference between Actual and Required

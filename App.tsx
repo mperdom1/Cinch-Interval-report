@@ -162,29 +162,62 @@ function App() {
                 return Math.round((act / tgt) * 100) + '%';
             };
 
-            const text = `Key Client Support - Actual vs Required Attainment :${calculateAttainment(keyRow.key, reqRow?.key || 0)}
-Key Client Support - Actual vs Committed Attainment :${calculateAttainment(keyRow.key, comRow?.key || 0)}
+            // 1. Attainment Section
+            const attainmentText = `*Attainment Report*
+Key Client Support - Act/Req: ${calculateAttainment(keyRow.key, reqRow?.key || 0)} | Act/Com: ${calculateAttainment(keyRow.key, comRow?.key || 0)}
+CSR HN - Act/Req: ${calculateAttainment(hnRow.hn, reqRow?.hn || 0)} | Act/Com: ${calculateAttainment(hnRow.hn, comRow?.hn || 0)}
+CSR PH - Act/Req: ${calculateAttainment(phRow.ph, reqRow?.ph || 0)} | Act/Com: ${calculateAttainment(phRow.ph, comRow?.ph || 0)}
+Retention - Act/Req: ${calculateAttainment(retRow.ret, reqRow?.ret || 0)} | Act/Com: ${calculateAttainment(retRow.ret, comRow?.ret || 0)}`;
 
-CSR HN - Actual vs Required Attainment :${calculateAttainment(hnRow.hn, reqRow?.hn || 0)}
-CSR HN - Actual vs Committed Attainment :${calculateAttainment(hnRow.hn, comRow?.hn || 0)}
+            // 2. Table Snapshot Section
+            const rowsToPrint = [
+                { label: 'Role', hn: 'HN', ph: 'PH', ret: 'Ret', key: 'Key' },
+                { label: 'Total Active', hn: hnRow.hn, ph: phRow.ph, ret: retRow.ret, key: keyRow.key },
+                { label: 'Actual', hn: hnRow.hn, ph: phRow.ph, ret: retRow.ret, key: keyRow.key },
+                { label: 'HC Required', hn: reqRow?.hn || 0, ph: reqRow?.ph || 0, ret: reqRow?.ret || 0, key: reqRow?.key || 0 },
+                { label: 'Commits', hn: comRow?.hn || 0, ph: comRow?.ph || 0, ret: comRow?.ret || 0, key: comRow?.key || 0 },
+            ];
 
-CSR PH - Actual vs Required Attainment :${calculateAttainment(phRow.ph, reqRow?.ph || 0)}
-CSR PH - Actual vs Committed Attainment :${calculateAttainment(phRow.ph, comRow?.ph || 0)}
+            const tableSnapshot = `\n\n*Interval Stats Snapshot*\n` + rowsToPrint.map(r =>
+                `${r.label.padEnd(15)} | HN: ${String(r.hn).padEnd(4)} | PH: ${String(r.ph).padEnd(4)} | Ret: ${String(r.ret).padEnd(4)} | Key: ${String(r.key).padEnd(4)}`
+            ).join('\n');
 
-Retention - Actual vs Required Attainment :${calculateAttainment(retRow.ret, reqRow?.ret || 0)}
-Retention Actual vs Committed Attainment :${calculateAttainment(retRow.ret, comRow?.ret || 0)}`;
+            // 3. Alerts Section (Long Duration)
+            const alertAgents = agents.filter(a => {
+                const state = a.state.toLowerCase();
+                return state.includes('break') ||
+                    state.includes('acw') ||
+                    state.includes('meeting') ||
+                    state.includes('offline') ||
+                    state.includes('coach');
+            }).map(a => {
+                const durParts = a.duration.split(':');
+                const minutes = durParts.length >= 2 ? parseInt(durParts[0]) * 60 + parseInt(durParts[1]) : 0;
+                let isLong = false;
+                if (a.state.toLowerCase().includes('break') && minutes > 15) isLong = true;
+                else if (a.state === 'ACW' && minutes > 5) isLong = true;
+                return { ...a, minutes, isLong };
+            }).filter(a => a.isLong) // Only show actual long duration alerts
+                .sort((a, b) => b.minutes - a.minutes);
 
-            navigator.clipboard.writeText(text).then(() => {
-                alert('✅ Attainment report copied to clipboard!\n\nYou can now paste it in Teams.');
+            const alertsText = `\n\n*Long Duration Alerts (${alertAgents.length})*\n` +
+                (alertAgents.length > 0
+                    ? alertAgents.map(a => `⚠️ ${a.name} (${a.team}) - ${a.state} [${a.duration}]`).join('\n')
+                    : '✅ No agents in long duration status.');
+
+            const finalText = attainmentText + tableSnapshot + alertsText;
+
+            navigator.clipboard.writeText(finalText).then(() => {
+                alert('✅ Detailed Team Report copied to clipboard!');
             }).catch(err => {
                 console.error('Failed to copy:', err);
-                alert('❌ Failed to copy to clipboard. Please try again.');
+                alert('❌ Failed to copy to clipboard.');
             });
         } catch (error) {
             console.error('Error generating Teams report:', error);
-            alert('❌ Error generating report. Please try again.');
+            alert('❌ Error generating report.');
         }
-    }, [intervalData]);
+    }, [intervalData, agents]);
 
     if (!user) {
         return <LoginScreen onLogin={handleLogin} />;

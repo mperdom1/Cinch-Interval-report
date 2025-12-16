@@ -141,81 +141,42 @@ function App() {
         }
     }, []);
 
-    const copyAttainmentForTeams = useCallback(() => {
+    const exportToExcel = useCallback(() => {
         try {
-            const hnRow = intervalData.find(row => row.label === 'HN');
-            const phRow = intervalData.find(row => row.label === 'PH');
-            const retRow = intervalData.find(row => row.label === 'Ret');
-            const keyRow = intervalData.find(row => row.label === 'Key');
             const reqRow = intervalData.find(row => row.label === 'HC Required');
-            const comRow = intervalData.find(row => row.label === 'HC Committed');
+            const comRow = intervalData.find(row => row.label === 'Commits');
+            const actualVsReqRow = intervalData.find(row => row.label === 'Actual vs Required Attainment');
+            const actualVsComRow = intervalData.find(row => row.label === 'Actual vs Committed Attainment');
 
-            if (!hnRow || !phRow || !retRow || !keyRow) {
-                alert('⚠️ No data available to copy');
-                return;
-            }
+            // Prepare data for Excel
+            const excelData = agents.map(agent => ({
+                'Agent Name': agent.name,
+                'Team': agent.team,
+                'Role': agent.role,
+                'State': agent.state,
+                'Duration': agent.duration,
+                'Actual vs Required %': actualVsReqRow?.[agent.role.toLowerCase() as 'hn' | 'ph' | 'ret' | 'key'] || '',
+                'Actual vs Committed %': actualVsComRow?.[agent.role.toLowerCase() as 'hn' | 'ph' | 'ret' | 'key'] || ''
+            }));
 
-            const calculateAttainment = (actual: number | string, target: number | string) => {
-                const act = typeof actual === 'string' ? parseFloat(actual) : actual;
-                const tgt = typeof target === 'string' ? parseFloat(target) : target;
-                if (tgt === 0) return '0%';
-                return Math.round((act / tgt) * 100) + '%';
-            };
+            // Convert to CSV
+            const headers = Object.keys(excelData[0] || {});
+            const csv = [
+                headers.join(','),
+                ...excelData.map(row => headers.map(h => `"${row[h as keyof typeof row]}"`).join(','))
+            ].join('\n');
 
-            // 1. Attainment Section
-            const attainmentText = `*Attainment Report*
-Key Client Support - Act/Req: ${calculateAttainment(keyRow.key, reqRow?.key || 0)} | Act/Com: ${calculateAttainment(keyRow.key, comRow?.key || 0)}
-CSR HN - Act/Req: ${calculateAttainment(hnRow.hn, reqRow?.hn || 0)} | Act/Com: ${calculateAttainment(hnRow.hn, comRow?.hn || 0)}
-CSR PH - Act/Req: ${calculateAttainment(phRow.ph, reqRow?.ph || 0)} | Act/Com: ${calculateAttainment(phRow.ph, comRow?.ph || 0)}
-Retention - Act/Req: ${calculateAttainment(retRow.ret, reqRow?.ret || 0)} | Act/Com: ${calculateAttainment(retRow.ret, comRow?.ret || 0)}`;
-
-            // 2. Table Snapshot Section
-            const rowsToPrint = [
-                { label: 'Role', hn: 'HN', ph: 'PH', ret: 'Ret', key: 'Key' },
-                { label: 'Total Active', hn: hnRow.hn, ph: phRow.ph, ret: retRow.ret, key: keyRow.key },
-                { label: 'Actual', hn: hnRow.hn, ph: phRow.ph, ret: retRow.ret, key: keyRow.key },
-                { label: 'HC Required', hn: reqRow?.hn || 0, ph: reqRow?.ph || 0, ret: reqRow?.ret || 0, key: reqRow?.key || 0 },
-                { label: 'Commits', hn: comRow?.hn || 0, ph: comRow?.ph || 0, ret: comRow?.ret || 0, key: comRow?.key || 0 },
-            ];
-
-            const tableSnapshot = `\n\n*Interval Stats Snapshot*\n` + rowsToPrint.map(r =>
-                `${r.label.padEnd(15)} | HN: ${String(r.hn).padEnd(4)} | PH: ${String(r.ph).padEnd(4)} | Ret: ${String(r.ret).padEnd(4)} | Key: ${String(r.key).padEnd(4)}`
-            ).join('\n');
-
-            // 3. Alerts Section (Long Duration)
-            const alertAgents = agents.filter(a => {
-                const state = a.state.toLowerCase();
-                return state.includes('break') ||
-                    state.includes('acw') ||
-                    state.includes('meeting') ||
-                    state.includes('offline') ||
-                    state.includes('coach');
-            }).map(a => {
-                const durParts = a.duration.split(':');
-                const minutes = durParts.length >= 2 ? parseInt(durParts[0]) * 60 + parseInt(durParts[1]) : 0;
-                let isLong = false;
-                if (a.state.toLowerCase().includes('break') && minutes > 15) isLong = true;
-                else if (a.state === 'ACW' && minutes > 5) isLong = true;
-                return { ...a, minutes, isLong };
-            }).filter(a => a.isLong) // Only show actual long duration alerts
-                .sort((a, b) => b.minutes - a.minutes);
-
-            const alertsText = `\n\n*Long Duration Alerts (${alertAgents.length})*\n` +
-                (alertAgents.length > 0
-                    ? alertAgents.map(a => `⚠️ ${a.name} (${a.team}) - ${a.state} [${a.duration}]`).join('\n')
-                    : '✅ No agents in long duration status.');
-
-            const finalText = attainmentText + tableSnapshot + alertsText;
-
-            navigator.clipboard.writeText(finalText).then(() => {
-                alert('✅ Detailed Team Report copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                alert('❌ Failed to copy to clipboard.');
-            });
+            // Download as CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interval_report_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error generating Teams report:', error);
-            alert('❌ Error generating report.');
+            console.error('Export error:', error);
+            alert('❌ Error exporting to Excel.');
         }
     }, [intervalData, agents]);
 
@@ -263,9 +224,9 @@ Retention - Act/Req: ${calculateAttainment(retRow.ret, reqRow?.ret || 0)} | Act/
 
                         <div className="flex items-center gap-3">
                             {user.role === 'wfm' && (
-                                <button onClick={copyAttainmentForTeams} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                    Copy for Teams
+                                <button onClick={exportToExcel} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Export to Excel
                                 </button>
                             )}
                             <button onClick={() => setShowHelper(true)} className="flex items-center gap-1 bg-[#5CCC69] hover:bg-[#4abb57] text-[#004d13] px-3 py-1.5 rounded-full text-xs font-bold transition-colors shadow-sm">

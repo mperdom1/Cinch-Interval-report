@@ -143,31 +143,42 @@ function App() {
 
     const exportToExcel = useCallback(() => {
         try {
-            const reqRow = intervalData.find(row => row.label === 'HC Required');
-            const comRow = intervalData.find(row => row.label === 'Commits');
             const actualVsReqRow = intervalData.find(row => row.label === 'Actual vs Required Attainment');
             const actualVsComRow = intervalData.find(row => row.label === 'Actual vs Committed Attainment');
 
-            // Prepare data for Excel
-            const excelData = agents.map(agent => ({
-                'Agent Name': agent.name,
-                'Team': agent.team,
-                'Role': agent.role,
-                'State': agent.state,
-                'Duration': agent.duration,
-                'Actual vs Required %': actualVsReqRow?.[agent.role.toLowerCase() as 'hn' | 'ph' | 'ret' | 'key'] || '',
-                'Actual vs Committed %': actualVsComRow?.[agent.role.toLowerCase() as 'hn' | 'ph' | 'ret' | 'key'] || ''
-            }));
+            // Build CSV content
+            const lines: string[] = [];
 
-            // Convert to CSV
-            const headers = Object.keys(excelData[0] || {});
-            const csv = [
-                headers.join(','),
-                ...excelData.map(row => headers.map(h => `"${row[h as keyof typeof row]}"`).join(','))
-            ].join('\n');
+            // 1. Attainment Summary Section
+            lines.push('ATTAINMENT SUMMARY');
+            lines.push('');
+            lines.push(`Key Client Support - Actual vs Required Attainment,${actualVsReqRow?.key || ''}`);
+            lines.push(`Key Client Support - Actual vs Committed Attainment,${actualVsComRow?.key || ''}`);
+            lines.push('');
+            lines.push(`CSR HN - Actual vs Required Attainment,${actualVsReqRow?.hn || ''}`);
+            lines.push(`CSR HN - Actual vs Committed Attainment,${actualVsComRow?.hn || ''}`);
+            lines.push('');
+            lines.push(`CSR PH - Actual vs Required Attainment,${actualVsReqRow?.ph || ''}`);
+            lines.push(`CSR PH - Actual vs Committed Attainment,${actualVsComRow?.ph || ''}`);
+            lines.push('');
+            lines.push(`Retention - Actual vs Required Attainment,${actualVsReqRow?.ret || ''}`);
+            lines.push(`Retention - Actual vs Committed Attainment,${actualVsComRow?.ret || ''}`);
+            lines.push('');
+            lines.push('');
+
+            // 2. Agents Affecting Interval Section
+            lines.push('AGENTS AFFECTING INTERVAL');
+            lines.push('');
+            lines.push('Agent Name,Team,Role,State,Duration');
+
+            agents.forEach(agent => {
+                lines.push(`"${agent.name}","${agent.team}","${agent.role}","${agent.state}","${agent.duration}"`);
+            });
+
+            const csv = lines.join('\n');
 
             // Download as CSV
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

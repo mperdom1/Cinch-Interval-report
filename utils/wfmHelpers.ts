@@ -395,7 +395,6 @@ export const calculateIntervalStats = (
             row.hn = counts.HN.training; row.ph = counts.PH.training; row.ret = counts.Ret.training; row.key = counts.Key.training;
         }
         // "Actual" ahora es Total Active - Total Offlines
-        // "Actual" ahora es Total Active - Total Offlines
         if (cat === 'Actual') {
             // Actual = Total Active - AUX
             row.hn = counts.HN.total - counts.HN.aux;
@@ -417,22 +416,63 @@ export const calculateIntervalStats = (
             row.ret = committed.ret;
             row.key = committed.key;
         }
+        // Specific state counts
+        if (cat === 'ACW_Outbound') {
+            row.hn = counts.HN.acwOutbound;
+            row.ph = counts.PH.acwOutbound;
+            row.ret = counts.Ret.acwOutbound;
+            row.key = counts.Key.acwOutbound;
+        }
+        if (cat === 'Off Phone') {
+            row.hn = counts.HN.offPhone;
+            row.ph = counts.PH.offPhone;
+            row.ret = counts.Ret.offPhone;
+            row.key = counts.Key.offPhone;
+        }
+        if (cat === 'Unscheduled Break') {
+            row.hn = counts.HN.unscheduledBreak;
+            row.ph = counts.PH.unscheduledBreak;
+            row.ret = counts.Ret.unscheduledBreak;
+            row.key = counts.Key.unscheduledBreak;
+        }
+        if (cat === 'System Issue') {
+            row.hn = counts.HN.systemIssue;
+            row.ph = counts.PH.systemIssue;
+            row.ret = counts.Ret.systemIssue;
+            row.key = counts.Key.systemIssue;
+        }
+        if (cat === 'Mentoring') {
+            row.hn = counts.HN.mentoring;
+            row.ph = counts.PH.mentoring;
+            row.ret = counts.Ret.mentoring;
+            row.key = counts.Key.mentoring;
+        }
+    });
+
+    // Second pass: Calculate attainment percentages and FTEs using the Actual row values
+    const actualRow = stats.find((r: any) => r.label === 'Actual');
+    const actualValues = actualRow ? {
+        hn: typeof actualRow.hn === 'number' ? actualRow.hn : 0,
+        ph: typeof actualRow.ph === 'number' ? actualRow.ph : 0,
+        ret: typeof actualRow.ret === 'number' ? actualRow.ret : 0,
+        key: typeof actualRow.key === 'number' ? actualRow.key : 0
+    } : { hn: 0, ph: 0, ret: 0, key: 0 };
+
+    stats.forEach((row: any) => {
+        const cat = row.label;
+
         // Calculate attainment percentages
         if (cat === 'Actual vs Required Attainment') {
-            // Use Actual row (Total Active - AUX)
-            const actual = { hn: counts.HN.total - counts.HN.aux, ph: counts.PH.total - counts.PH.aux, ret: counts.Ret.total - counts.Ret.aux, key: counts.Key.total - counts.Key.aux };
-            row.hn = required.hn > 0 ? Math.round((actual.hn / required.hn) * 100) + '%' : '';
-            row.ph = required.ph > 0 ? Math.round((actual.ph / required.ph) * 100) + '%' : '';
-            row.ret = required.ret > 0 ? Math.round((actual.ret / required.ret) * 100) + '%' : '';
-            row.key = required.key > 0 ? Math.round((actual.key / required.key) * 100) + '%' : '';
+            row.hn = required.hn > 0 ? Math.round((actualValues.hn / required.hn) * 100) + '%' : '';
+            row.ph = required.ph > 0 ? Math.round((actualValues.ph / required.ph) * 100) + '%' : '';
+            row.ret = required.ret > 0 ? Math.round((actualValues.ret / required.ret) * 100) + '%' : '';
+            row.key = required.key > 0 ? Math.round((actualValues.key / required.key) * 100) + '%' : '';
         }
         if (cat === 'Actual vs Committed Attainment') {
-            // Use Actual row (Total Active - AUX)
-            const actual = { hn: counts.HN.total - counts.HN.aux, ph: counts.PH.total - counts.PH.aux, ret: counts.Ret.total - counts.Ret.aux, key: counts.Key.total - counts.Key.aux };
-            row.hn = committed.hn > 0 ? Math.round((actual.hn / committed.hn) * 100) + '%' : '';
-            row.ph = committed.ph > 0 ? Math.round((actual.ph / committed.ph) * 100) + '%' : '';
-            row.ret = committed.ret > 0 ? Math.round((actual.ret / committed.ret) * 100) + '%' : '';
-            row.key = committed.key > 0 ? Math.round((actual.key / committed.key) * 100) + '%' : '';
+            row.hn = committed.hn > 0 ? Math.round((actualValues.hn / committed.hn) * 100) + '%' : '';
+            row.ph = committed.ph > 0 ? Math.round((actualValues.ph / committed.ph) * 100) + '%' : '';
+            row.ret = committed.ret > 0 ? Math.round((actualValues.ret / committed.ret) * 100) + '%' : '';
+            row.key = committed.key > 0 ? Math.round((actualValues.key / committed.key) * 100) + '%' : '';
         }
 
         // FTE Calculations

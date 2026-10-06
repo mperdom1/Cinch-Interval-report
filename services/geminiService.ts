@@ -1,12 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const generateWfmReport = async (stats: any, alerts: any) => {
-  if (!process.env.API_KEY) {
-      console.warn("API_KEY not found in environment.");
-      return "Error: API Key is missing. Please check your configuration.";
+  // La clave de Gemini NO debe ir en el navegador. Esta función está desactivada
+  // hasta que se mueva a una función del servidor (api/).
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+  if (!apiKey) {
+      console.warn("VITE_GEMINI_API_KEY no está definida; el reporte con IA está desactivado.");
+      return "Error: el reporte con IA no está configurado.";
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `
   You are a Workforce Management (WFM) Senior Analyst. 

@@ -1,9 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
+import { getAnalytics, Analytics } from 'firebase/analytics';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
-import { getMessaging } from 'firebase/messaging';
+import { getMessaging, Messaging } from 'firebase/messaging';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -20,11 +20,31 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize services
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+// Analytics y Messaging no existen en todos los navegadores (ej. Safari iOS sin instalar la app).
+// Si fallan, la app debe seguir cargando sin ellos.
+let analyticsInstance: Analytics | null = null;
+let messagingInstance: Messaging | null = null;
+
+if (typeof window !== 'undefined') {
+  try {
+    analyticsInstance = getAnalytics(app);
+  } catch (e) {
+    console.warn('Firebase Analytics no disponible:', e);
+  }
+  try {
+    if ('serviceWorker' in navigator && 'Notification' in window) {
+      messagingInstance = getMessaging(app);
+    }
+  } catch (e) {
+    console.warn('Firebase Messaging no disponible:', e);
+  }
+}
+
+export const analytics = analyticsInstance;
+export const messaging = messagingInstance;
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const realtimeDb = getDatabase(app);
-export const messaging = getMessaging(app);
 
 export default app;

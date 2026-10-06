@@ -45,3 +45,6 @@ export interface User {
     email: string;
     role: UserRole;
 }
+
+/** Estado de intervalos guardado en Firebase (ruta 'intervals') */
+export type AppState = IntervalRow[];

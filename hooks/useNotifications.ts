@@ -25,19 +25,23 @@ export const useNotifications = (user: User | null) => {
     useEffect(() => {
         if (!user || !messaging) return;
 
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+        if (!vapidKey) {
+            console.warn('Falta VITE_FIREBASE_VAPID_KEY: las notificaciones push en segundo plano están desactivadas.');
+        }
+
         // Register worker and get token
-        if (Notification.permission === 'granted') {
+        if (vapidKey && 'serviceWorker' in navigator && Notification.permission === 'granted') {
             navigator.serviceWorker.register('/firebase-messaging-sw.js')
                 .then((registration) => {
                     return getToken(messaging!, {
-                        vapidKey: '0uJO-07kPlNU5ja9Xj0SdfG2AMI4kjLMknlw9quZEII',
+                        vapidKey,
                         serviceWorkerRegistration: registration
                     });
                 })
                 .then((currentToken) => {
                     if (currentToken && user.email) {
-                        console.log('FCM Token:', currentToken);
-                        const db = getDatabase();
+                            const db = getDatabase();
                         // Sanitized email key
                         const emailKey = user.email.replace(/[.@]/g, '_');
                         set(ref(db, 'fcmTokens/' + emailKey), {

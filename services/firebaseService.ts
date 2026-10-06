@@ -215,7 +215,7 @@ export const triggerAgentUpdateNotification = async (agents: Agent[], updatedBy:
 
     // Llamar al endpoint del backend para enviar la notificación FCM
     try {
-      await fetch('http://localhost:3001/notify-staffing-update', {
+      await fetch('/api/notify-staffing-update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
